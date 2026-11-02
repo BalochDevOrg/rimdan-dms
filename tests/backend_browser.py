@@ -6,13 +6,15 @@ from pathlib import Path
 import subprocess
 import time
 from urllib.request import urlopen
+from browser_support import launch_options, ARTIFACT_ROOT
 from playwright.sync_api import sync_playwright, expect
 
 BASE='http://127.0.0.1:3001'
 PASSWORD='Fictional-Test-Password-2026'
 fixture=json.loads(subprocess.check_output(['node','tests/prepare-browser-db.js'],text=True))
 environment={**os.environ,'DATABASE_URL':fixture['url'],'APP_ORIGIN':BASE,'APP_ENV':'development','PORT':'3001'}
-log=open('/tmp/rimdan-backend-browser.log','w')
+artifacts=Path(os.environ.get('RIMDAN_TEST_ARTIFACTS',ARTIFACT_ROOT));artifacts.mkdir(parents=True,exist_ok=True)
+log=open(artifacts/'rimdan-backend-browser.log','w',encoding='utf-8')
 server=subprocess.Popen(['node','server/dev.js'],env=environment,stdout=log,stderr=log)
 try:
  for _ in range(50):
@@ -21,7 +23,7 @@ try:
    break
   except OSError:time.sleep(.1)
  with sync_playwright() as p:
-  browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
+  browser=p.chromium.launch(**launch_options())
   errors=[]
   def login(email,width=1440):
    context=browser.new_context(viewport={'width':width,'height':1000},has_touch=True)
@@ -66,10 +68,10 @@ try:
   assert employee.locator('#saveBtn').count()==0 and employee.locator('#pdfBtn').count()==0
   assert employee.locator('[data-mark=signature] img').count()==1
   employee.emulate_media(media='print');assert employee.locator('.app').is_hidden();expect(employee.locator('.employee-print-warning')).to_be_visible();employee.emulate_media(media='screen')
-  employee.screenshot(path='/tmp/rimdan-server-employee.png',full_page=True)
+  employee.screenshot(path=str(artifacts/'rimdan-server-employee.png'),full_page=True)
   manager.locator('[data-go=documents]').first.click();manager.once('dialog',lambda d:d.accept());manager.get_by_role('button',name='انتقال پیش‌نویس‌های مرورگر',exact=True).click();manager.wait_for_function("docs.some(d=>d.title==='Local migration fixture')")
   assert manager.evaluate("JSON.parse(localStorage.getItem('rimdan_demo_docs'))[0].body")=='Original local content'
-  manager.screenshot(path='/tmp/rimdan-server-manager.png',full_page=True)
+  manager.screenshot(path=str(artifacts/'rimdan-server-manager.png'),full_page=True)
   assert employee.evaluate("fetch('/server/auth.js').then(r=>r.status)")==404
   assert not errors,errors
   browser.close()

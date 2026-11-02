@@ -1,12 +1,14 @@
+from browser_support import launch_options, ARTIFACT_ROOT
 from playwright.sync_api import sync_playwright
 from pathlib import Path
 import os
 BASE_URL=os.environ.get('RIMDAN_TEST_URL','http://127.0.0.1:8000')
-ARTIFACTS=Path(os.environ.get('RIMDAN_TEST_ARTIFACTS','/tmp'))
+ARTIFACTS=Path(os.environ.get('RIMDAN_TEST_ARTIFACTS',ARTIFACT_ROOT))
 ARTIFACTS.mkdir(parents=True,exist_ok=True)
 with sync_playwright() as p:
- b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
+ b=p.chromium.launch(**launch_options())
  page=b.new_page(viewport={'width':1600,'height':1100});errors=[]
+ page.set_default_timeout(120000)
  page.on('pageerror',lambda e:errors.append(str(e)))
  page.goto(BASE_URL)
  page.evaluate("localStorage.setItem('rimdan_demo_docs',JSON.stringify([{id:'legacy',title:'Legacy draft',number:'OLD-01',recipient:'Old customer',body:'Old body',type:'letter',status:'draft',updated:'2026-01-01T00:00:00Z'}]))")
@@ -80,6 +82,8 @@ with sync_playwright() as p:
  assert page.locator('.letterhead-art').count()==1
  page.locator('.letterhead-controls summary').click();page.locator('#removeLetterhead').click()
  assert page.locator('#paper .letterhead-art').get_attribute('src')=='assets/english-pad.png'
+ # Letterhead actions select Preview; return to Edit before typing.
+ if page.locator('#editTab').is_visible():page.locator('#editTab').click()
  page.locator('#docBody').fill('Long paragraph for pagination.\n'*180)
  assert page.locator('#overflowNotice').is_visible()
  page.pdf(path=str(ARTIFACTS/'rimdan-long-test.pdf'),prefer_css_page_size=True)

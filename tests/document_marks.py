@@ -4,10 +4,11 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
+from browser_support import launch_options, ARTIFACT_ROOT
 from playwright.sync_api import sync_playwright, expect
 
 BASE_URL = os.environ.get('RIMDAN_TEST_URL', 'http://127.0.0.1:8000')
-ARTIFACTS = Path(os.environ.get('RIMDAN_TEST_ARTIFACTS', '/tmp'))
+ARTIFACTS = Path(os.environ.get('RIMDAN_TEST_ARTIFACTS', ARTIFACT_ROOT))
 ARTIFACTS.mkdir(parents=True, exist_ok=True)
 
 
@@ -43,7 +44,7 @@ def inside(mark):
 
 
 with sync_playwright() as p:
-    browser = p.chromium.launch(executable_path='/usr/bin/chromium', headless=True, args=['--no-sandbox'])
+    browser = p.chromium.launch(**launch_options())
     context = browser.new_context(viewport={'width':1600,'height':1100}, has_touch=True)
     page = context.new_page()
     cdp=context.new_cdp_session(page)

@@ -5,10 +5,11 @@ import os
 from pathlib import Path
 import re
 import subprocess
+from browser_support import launch_options, ARTIFACT_ROOT
 from playwright.sync_api import sync_playwright, expect
 
 BASE=os.environ.get('RIMDAN_TEST_URL','http://127.0.0.1:8000')
-OUT=Path(os.environ.get('RIMDAN_TEST_ARTIFACTS','/tmp'))
+OUT=Path(os.environ.get('RIMDAN_TEST_ARTIFACTS',ARTIFACT_ROOT))
 OUT.mkdir(parents=True,exist_ok=True)
 WIDTHS=[int(v) for v in os.environ.get('RIMDAN_MOBILE_WIDTHS','320,360,375,390,414,768,1024').split(',')]
 TEMPLATES=['letter','invoice','receipt','delivery','transaction','custom']
@@ -36,7 +37,7 @@ def touch_drag(cdp,x,y,dx,dy):
 
 
 with sync_playwright() as p:
-    browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
+    browser=p.chromium.launch(**launch_options())
     for language in ['fa','en']:
         for width in WIDTHS:
             context=browser.new_context(viewport={'width':width,'height':900},has_touch=True)
