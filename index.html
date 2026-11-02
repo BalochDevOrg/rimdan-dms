@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Rimdan Trade | Document Workspace</title>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="app" id="app">
+<aside class="sidebar" id="sidebar">
+ <div class="brand"><div class="brand-logo"><img src="assets/logo.png" alt="Rimdan Trade logo"></div><div><strong data-i="company">روهان تجارت ریمدان</strong><small data-i="workspace">سامانه مدیریت اسناد</small></div></div>
+ <div class="nav-label" data-i="workspaceLabel">فضای کاری</div>
+ <nav><button class="nav active" data-page="dashboard">▦ <span data-i="dashboard">داشبورد</span></button><button class="nav" data-page="documents">▤ <span data-i="documents">اسناد</span></button><button class="nav" data-page="templates">▧ <span data-i="templates">قالب‌ها</span></button><button class="nav" data-page="settings">⚙ <span data-i="settings">تنظیمات</span></button></nav>
+ <div class="sidebar-bottom"><div class="demo-pill" data-i="prototype">نسخه نمایشی — داده آزمایشی</div><div class="user"><span class="avatar">RT</span><div><strong data-i="demoUser">مدیر آزمایشی</strong><small data-i="role">حالت نمایش</small></div></div></div>
+</aside>
+<div class="main-wrap">
+ <header class="topbar"><button class="mobile-toggle" id="menuBtn" aria-label="Open menu">☰</button><div class="crumb"><span data-i="workspace">سامانه مدیریت اسناد</span><span class="sep">/</span><b id="crumbCurrent"></b></div><div class="top-actions"><span class="status-dot"></span><span class="top-label" data-i="demoMode">حالت آزمایشی</span><button id="langBtn" class="outline-btn">English</button><span class="avatar mini">RT</span></div></header>
+ <main id="view"></main>
+ <footer><span data-i="footer">نمونه آزمایشی طراحی شده توسط BalochDev — برای اطلاعات محرمانه استفاده نشود</span></footer>
+</div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script src="script.js"></script>
+</body></html>
