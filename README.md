@@ -25,6 +25,22 @@ In the editor, expand **Company letterhead** and import the original blank PNG/J
 
 Print uses A4 with 18 mm page margins. Imported artwork extends into those margins; physical edge-to-edge output requires a printer supporting borderless A4. Turn off browser headers/footers and use 100% scale. Background graphics may need enabling for the provisional watermark. The screen scales a physical A4 canvas; long content expands with a warning and flows across printed pages. Repeated original letterhead on continuation pages and a paginated screen preview are not implemented. Imported artwork is intended for single-page letters. The provided reference image has a different aspect ratio from A4; fitting preserves its ratio and can leave narrow white edges.
 
+## Signature and company stamp
+
+Expand **Signature and company stamp / امضا و مهر شرکت** in the editor. Upload your own PNG, JPEG or WebP, or draw a signature with a mouse, pen or touchscreen. No stamp generator or authentic-looking sample stamp is included. Drawing is optional; uploading an image is the keyboard-accessible alternative.
+
+Upload and **Preview drawing** only prepare a pending image. Nothing is applied until you choose **Place / replace on document**. Replacing preserves placement. Clear removes the pending image; Remove from document removes the placed asset. Save the draft to persist placement or removal. Each draft supports one signature and one stamp. Duplicate draft explicitly copies the draft's placed assets; new documents start without them. Pending images and drawings are memory-only and are cleared when opening another draft or creating a new one. A drawing survives interface-language rerendering but is not saved until it has been placed and the draft saved.
+
+Drag an image or its move handle to reposition it; drag the lower corner to resize with its aspect ratio preserved. On mobile, move and resize handles retain 44 × 44 CSS-pixel touch targets even when the page preview scales down. Numeric fields specify distance from the physical left/top page edges and width in millimetres, regardless of interface language. Focus a placed image or either handle: arrow keys move 1 mm (Shift: 5 mm), +/− resize. All methods clamp the complete image to x 18–192 mm and y 100–250 mm, protecting the header and footer of the known Rimdan layout. Custom artwork is not automatically analyzed; check its protected regions and manually avoid overlapping body text or the other asset.
+
+PNG/WebP alpha is preserved. Drawings default to transparent and can be given an opaque white background. The optional signature-only near-white removal removes pixels with every RGB channel at least 245; it can remove light-colored ink and is not a sophisticated background-removal tool. Stamp backgrounds are never altered beyond raster normalization.
+
+Uploads require matching MIME and PNG/JPEG/WebP magic bytes, at most 2 MB, dimensions no greater than 4096 per side or 12 megapixels, and aspect ratio 1:5 through 12:1. Decoded images are rasterized to PNG with their longest side capped at 1200 pixels, stripping original metadata. Converted data must fit 1.5 million characters; some high-detail images need reducing before import. SVG, external image URLs, corrupt files and unsupported types are rejected. Reopened mark sources are restricted to embedded PNG data; coordinates are normalized again.
+
+Images and coordinates are embedded **only in that draft** under its `marks.signature` and `marks.stamp` fields in the existing browser-local draft store. There is no global signature/stamp library, upload endpoint, or organizational sharing feature. This is not permission isolation: anyone with access to the same browser profile/site storage can read its drafts and assets. Secure organizational asset management, role permissions, revocation, audit and authenticity verification require a production backend. Avoid real sensitive signatures in this prototype. Imported letterhead retains its existing separate browser-wide behavior.
+
+Placed assets print/export on the **first page only** at the same physical coordinates as the live preview. Signed documents use a full A4 named print page with 18 mm internal margins (and existing letterhead spacing), avoiding shrink-to-fit from full-page artwork. Print handles and editor outlines are excluded. Use 100% print scale with browser headers/footers off. Long documents still flow across pages, but there is no page selector, repeated signature/stamp, automatic text wrap around assets or collision detection. Review the PDF before use; physical printer borderless limits and browser differences remain.
+
 ## Validation
 
 No test runner existed in the initial repository. A browser regression script is now provided:
@@ -32,10 +48,12 @@ No test runner existed in the initial repository. A browser regression script is
 ```sh
 # Requires Python Playwright and Chromium; already available in the tested cloud environment.
 python3 tests/browser_smoke.py
+python3 tests/document_marks.py
 node --check script.js
+node --check document-marks.js
 ```
 
-Start the static server first. Override `RIMDAN_TEST_URL` if needed, `RIMDAN_TEST_ARTIFACTS` for screenshots/PDFs (default `/tmp`). Tests use an isolated browser context and fictional drafts, including an injected legacy draft and a synthetic blank image for letterhead import. They do not touch your normal browser data. Tests cover editing, formatting/date persistence, saving/reopening, duplication, library search, language/direction, discarded-navigation cancellation, template replacement, storage failure, artwork import/removal/reload, six viewport widths, PDF action and rendering. PDF dimensions/page counts can be checked with `pdfinfo`.
+Start the static server first. Override `RIMDAN_TEST_URL` if needed, `RIMDAN_TEST_ARTIFACTS` for screenshots/PDFs (default `/tmp`). Tests use an isolated browser context and fictional drafts, including an injected legacy draft and a synthetic blank image for letterhead import. They do not touch your normal browser data. Tests cover editing, formatting/date persistence, saving/reopening, duplication, library search, language/direction, discarded-navigation cancellation, template replacement, storage failure, artwork import/removal/reload, six viewport widths, PDF action and rendering. The signature/stamp suite additionally covers real mouse/pen/touch events, explicit placement, image validation/transparency, numeric/keyboard bounds, replacements/removals, draft isolation, unsafe restored-source rejection, and print coordinates with provisional and imported letterhead. It uses abstract image fixtures, never authentic-looking test stamps. PDF dimensions/page counts are checked when `pdfinfo` is available. Test screenshots and PDFs are written under `/tmp` by default.
 
 ## Limitations
 
