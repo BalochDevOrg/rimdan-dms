@@ -52,3 +52,33 @@ html[lang=en] .editor-fields{direction:ltr}
  .document-marks,.has-letterhead .document-marks{left:0;top:0;width:210mm;height:297mm}
  .document-mark{transform:none}
 }
+/* Official pads: all geometry is in physical millimetres; original pixels stay intact. */
+.official-paper.preview-paper{height:297mm;min-height:297mm;max-height:297mm;border:0;padding:98mm 18mm 55mm;display:flex;overflow:hidden;flex-shrink:0}
+.official-paper .letterhead-art{position:absolute;inset:0;width:210mm;height:297mm;object-fit:contain;z-index:-1}
+.official-paper .paper-head,.official-paper .paper-footer,.official-paper::before{display:none!important}
+.official-paper .paper-date{position:absolute;left:0;top:0;width:210mm;height:90mm;margin:0;padding:0;direction:ltr}
+.official-paper #numberLabel{display:none}
+.official-paper .paper-date>div{position:absolute;padding:0!important;margin:0;white-space:nowrap;line-height:5.5mm;font-size:10pt;font-weight:500;color:#152b42;text-align:center;overflow:hidden}
+.official-paper .paper-date>div:first-child{top:67mm;left:145mm;width:37mm;height:5.5mm}
+.official-paper .paper-date>div:last-child{top:75.2mm;left:145mm;width:37mm;height:5.5mm}
+.official-paper[data-pad=en] .paper-date>div:first-child{top:67.5mm;left:162mm;width:40.5mm}
+.official-paper[data-pad=en] .paper-date>div:last-child{top:75.4mm;left:162mm;width:40.5mm}
+.official-paper[data-pad=custom][dir=ltr] .paper-date>div{left:162mm;width:40.5mm}
+.official-paper .paper-date bdi{display:block;max-width:100%;overflow:hidden;text-overflow:clip}
+.official-paper h1{font-size:14pt;line-height:1.7;margin:0 0 4mm;max-height:24mm;overflow:hidden;flex-shrink:0}
+.official-paper .paper-recipient{font-size:11pt;line-height:1.8;margin:0 0 5mm;max-height:18mm;overflow:hidden;flex-shrink:0}
+.official-paper .paper-body{flex:1;min-height:0;overflow:hidden}
+.continuation-paper{margin-top:20px!important}
+.pagination-probe{position:fixed;left:-20000px;top:0;visibility:hidden;white-space:pre-wrap;overflow-wrap:anywhere;padding:0;margin:0;border:0;box-sizing:border-box}
+#letterheadStatus{font-size:12px;color:#93621d;line-height:1.9}
+@page rimdan-official{size:A4;margin:0}
+@media print{
+ .official-paper.preview-paper,.has-letterhead.official-paper.preview-paper,.official-paper.preview-paper:has(.document-mark),.has-letterhead.official-paper.preview-paper:has(.document-mark){page:rimdan-official;width:210mm!important;height:297mm!important;min-height:297mm!important;max-height:297mm!important;padding:98mm 18mm 55mm!important;display:flex!important;overflow:hidden!important;break-after:page;break-inside:avoid;box-decoration-break:slice;-webkit-box-decoration-break:slice}
+ .official-paper:last-child{break-after:auto}
+ .official-paper .letterhead-art,.official-paper.preview-paper:has(.document-mark) .letterhead-art{inset:0;width:210mm;height:297mm;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+ .official-paper .paper-date{margin:0!important}
+ .continuation-paper{margin:0!important}
+ #letterheadStatus{display:none!important}
+}
+
+.letterhead-controls select{width:100%;min-width:0;max-width:100%}

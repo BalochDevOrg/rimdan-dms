@@ -10,7 +10,7 @@ const DocumentMarks = (() => {
       draw: 'Draw a signature', canvas: 'Signature drawing area. Use a mouse, touch or pen; image upload is the keyboard-accessible alternative.',
       clearDrawing: 'Clear drawing', useDrawing: 'Preview drawing', background: 'Transparent drawing background',
       left: 'From left (mm)', top: 'From top (mm)', width: 'Width (mm)',
-      help: 'Drag the placed image to move; drag its corner to resize. Keyboard: arrow keys move (Shift = 5 mm); +/− resize. Numeric fields provide an alternative. Assets stay within x 18–192 mm, y 100–250 mm on the first A4 page. Check for overlap with text.',
+      help: 'Drag the placed image to move; drag its corner to resize. Keyboard: arrow keys move (Shift = 5 mm); +/− resize. Numeric fields provide an alternative. Assets stay within x 18–192 mm, y 100–242 mm on the first A4 page. Check for overlap with text.',
       invalid: 'Image rejected. Use a valid PNG, JPEG or WebP up to 2 MB and 4096 × 4096 pixels (at most 12 megapixels). Use aspect ratios from 1:5 to 12:1. Try a smaller image if conversion is too large. SVG and external URLs are not accepted.',
       ready: 'Image ready for preview. Choose Place to apply it.', applied: 'Image placed on this draft.', removed: 'Image removed from this draft.',
       blank: 'Draw a signature first.', resize: 'Resize', move: 'Move', busy: 'Reading image…',
@@ -25,7 +25,7 @@ const DocumentMarks = (() => {
       draw: 'رسم امضا', canvas: 'ناحیه رسم امضا با ماوس، لمس یا قلم؛ انتخاب فایل جایگزین قابل استفاده با صفحه‌کلید است.',
       clearDrawing: 'پاک کردن رسم', useDrawing: 'پیش‌نمایش رسم', background: 'پس‌زمینه شفاف رسم',
       left: 'فاصله از چپ (میلی‌متر)', top: 'فاصله از بالا (میلی‌متر)', width: 'عرض (میلی‌متر)',
-      help: 'برای جابه‌جایی تصویر را بکشید و برای تغییر اندازه گوشه آن را بکشید. صفحه‌کلید: کلیدهای جهت، جابه‌جایی؛ همراه Shift، پنج میلی‌متر؛ + و −، تغییر اندازه. فیلدهای عددی نیز قابل استفاده هستند. محدوده مجاز صفحه اول: افقی ۱۸ تا ۱۹۲ و عمودی ۱۰۰ تا ۲۵۰ میلی‌متر. هم‌پوشانی با متن را بررسی کنید.',
+      help: 'برای جابه‌جایی تصویر را بکشید و برای تغییر اندازه گوشه آن را بکشید. صفحه‌کلید: کلیدهای جهت، جابه‌جایی؛ همراه Shift، پنج میلی‌متر؛ + و −، تغییر اندازه. فیلدهای عددی نیز قابل استفاده هستند. محدوده مجاز صفحه اول: افقی ۱۸ تا ۱۹۲ و عمودی ۱۰۰ تا ۲۴۲ میلی‌متر. هم‌پوشانی با متن را بررسی کنید.',
       invalid: 'تصویر پذیرفته نشد. فایل معتبر PNG، JPEG یا WebP تا ۲ مگابایت و ابعاد حداکثر ۴۰۹۶ × ۴۰۹۶ پیکسل (حداکثر ۱۲ مگاپیکسل) انتخاب کنید. نسبت عرض به ارتفاع باید بین ۱ به ۵ و ۱۲ به ۱ باشد. اگر تبدیل تصویر حجیم است، فایل کوچک‌تری انتخاب کنید. SVG و نشانی اینترنتی پذیرفته نمی‌شود.',
       ready: 'تصویر برای پیش‌نمایش آماده است. برای اعمال، دکمه قرار دادن را انتخاب کنید.', applied: 'تصویر روی این پیش‌نویس قرار گرفت.', removed: 'تصویر از این پیش‌نویس حذف شد.',
       blank: 'ابتدا امضا را رسم کنید.', resize: 'تغییر اندازه', move: 'جابه‌جایی', busy: 'در حال خواندن تصویر…',
@@ -49,7 +49,7 @@ const DocumentMarks = (() => {
     const width = clamp(number(mark.width, 48), 12, Math.min(80, 60 * ratio));
     return { src: mark.src, ratio, width,
       x: clamp(number(mark.x, 30), 18, 192 - width),
-      y: clamp(number(mark.y, 210), 100, 250 - width / ratio) };
+      y: clamp(number(mark.y, 210), 100, 242 - width / ratio) };
   }
 
   function clean(marks) {
@@ -140,7 +140,7 @@ const DocumentMarks = (() => {
         const input = document.getElementById(`${kind}-${key}`); input.disabled = !mark;
         input.value = mark ? Math.round(mark[key]*10)/10 : '';
         input.min = key === 'x' ? 18 : key === 'y' ? 100 : 12;
-        input.max = mark ? (key === 'x' ? 192-mark.width : key === 'y' ? 250-mark.width/mark.ratio : Math.min(80,60*mark.ratio)) : 80;
+        input.max = mark ? (key === 'x' ? 192-mark.width : key === 'y' ? 242-mark.width/mark.ratio : Math.min(80,60*mark.ratio)) : 80;
       }
     }
   }

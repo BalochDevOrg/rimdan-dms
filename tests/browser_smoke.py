@@ -72,13 +72,14 @@ with sync_playwright() as p:
  import base64
  fixture=page.evaluate("() => {const c=document.createElement('canvas');c.width=840;c.height=1188;const ctx=c.getContext('2d');ctx.fillStyle='#edf1f6';ctx.fillRect(0,0,840,1188);return c.toDataURL('image/png').split(',')[1]}")
  page.locator('#letterheadFile').set_input_files({'name':'test-letterhead.png','mimeType':'image/png','buffer':base64.b64decode(fixture)})
- page.wait_for_selector('.has-letterhead')
+ page.wait_for_selector('#paper[data-pad=custom]')
+ page.locator('#saveBtn').click()
  assert page.locator('.letterhead-art').evaluate('(e)=>e.complete && e.naturalWidth===840')
  page.pdf(path=str(ARTIFACTS/'rimdan-import-test.pdf'),prefer_css_page_size=True)
  page.reload();page.locator('[data-page=documents]').click();page.locator('#searchInput').fill('Copy');page.locator('button[data-open]').click()
  assert page.locator('.letterhead-art').count()==1
  page.locator('.letterhead-controls summary').click();page.locator('#removeLetterhead').click()
- assert page.locator('.letterhead-art').count()==0
+ assert page.locator('#paper .letterhead-art').get_attribute('src')=='assets/english-pad.png'
  page.locator('#docBody').fill('Long paragraph for pagination.\n'*180)
  assert page.locator('#overflowNotice').is_visible()
  page.pdf(path=str(ARTIFACTS/'rimdan-long-test.pdf'),prefer_css_page_size=True)

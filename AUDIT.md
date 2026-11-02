@@ -1,3 +1,5 @@
+> Update: the official pad files were subsequently added to `main` in commit `a1069e6`. The `feature/official-bilingual-letterheads` implementation uses those originals directly, automatically follows document language, and retains the signature/stamp tools. The initial audit below describes the earlier checkout, before the uploads. See README for current behavior and validation commands.
+
 # Repository audit and implementation status
 
 Audit performed 2 November 2026. Local branch `work` and remote `main` initially pointed to `8158f351ee282fcda25f51944b6806047e25570b` (Initial Rimdan DMS prototype). The available Git history contains one commit, no other remote heads/tags, and no dangling recoverable commits reported by `git fsck --full --no-reflogs`. The reflog contains checkout creation only. Uncommitted script/style changes at audit time were ongoing work from this cloud session. Laptop-local Codex Desktop files are not accessible. No pre-existing test suite, manifest, build system, or additional application assets were present.

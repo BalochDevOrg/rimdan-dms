@@ -39,7 +39,7 @@ def alpha(page, src):
 
 def inside(mark):
     assert 18 <= mark['x'] <= 192 - mark['width'] + .001
-    assert 100 <= mark['y'] <= 250 - mark['width'] / mark['ratio'] + .001
+    assert 100 <= mark['y'] <= 242 - mark['width'] / mark['ratio'] + .001
 
 
 with sync_playwright() as p:
@@ -191,7 +191,7 @@ with sync_playwright() as p:
     page.emulate_media(media='screen')
     page.locator('.letterhead-controls summary').click()
     page.locator('#letterheadFile').set_input_files(dict(name='blank-letterhead.png',mimeType='image/png',buffer=fixture(page,width=840,height=1188,white=True)))
-    expect(page.locator('.has-letterhead')).to_have_count(1)
+    expect(page.locator('#paper')).to_have_attribute('data-pad','custom')
     page.emulate_media(media='print')
     page.pdf(path=str(ARTIFACTS/'rimdan-marks-letterhead-a4.pdf'),prefer_css_page_size=True,display_header_footer=False)
     page.emulate_media(media='print')
@@ -200,7 +200,7 @@ with sync_playwright() as p:
         assert abs((box['y']-paper['y'])-marks(page)[kind]['y']*96/25.4)<1
     page.emulate_media(media='screen')
     # Import rerenders the details controls closed.
-    page.locator('.letterhead-controls summary').click();page.locator('#removeLetterhead').click()
+    page.locator('.letterhead-controls summary').click();page.locator('#removeLetterhead').click();page.locator('#saveBtn').click()
     # New documents have no inherited assets, and saved documents retain their own.
     page.locator('[data-go=documents]').first.click();page.locator('[data-new=letter]').click()
     assert not any(marks(page).values()) and page.locator('[data-mark]').count()==0
