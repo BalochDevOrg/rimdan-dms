@@ -47,7 +47,7 @@ const DocumentMarks = (() => {
     if (!mark || !safePNG(mark.src)) return null;
     const ratio = clamp(number(mark.ratio, 2), 0.2, 12);
     const width = clamp(number(mark.width, 48), 12, Math.min(80, 60 * ratio));
-    return { src: mark.src, ratio, width,
+    return { src: mark.src, ...(typeof mark.assetId==='string'?{assetId:mark.assetId}:{}), ratio, width,
       x: clamp(number(mark.x, 30), 18, 192 - width),
       y: clamp(number(mark.y, 210), 100, 242 - width / ratio) };
   }

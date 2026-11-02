@@ -1,0 +1,161 @@
+import {transaction} from './db.js';
+import {token,digest,hashPassword,verifyPassword,passwordValid,configuration,cookie,readCookie,constantEqual} from './auth.js';
+import {fail,uuid,text,validateDocument,verifyAssets,linkAssets,normalizeAsset,wire} from './documents.js';
+const accountColumns='id,email,role,active,created_at,has_password';
+const staff=user=>{if(!['administrator','manager'].includes(user.role))fail(403,'Read-only account');};
+const admin=user=>{if(user.role!=='administrator')fail(403,'Administrator required');};
+async function body(req){
+ if(!String(req.headers['content-type']||'').startsWith('application/json'))fail(415,'JSON required');
+ if(req.body!==undefined){const raw=typeof req.body==='string'?req.body:JSON.stringify(req.body);if(Buffer.byteLength(raw)>4*1024*1024)fail(413,'Request too large');try{return typeof req.body==='string'?JSON.parse(req.body):req.body;}catch{fail(400,'Invalid JSON');}}
+ let length=0,parts=[];for await(const chunk of req){length+=chunk.length;if(length>4*1024*1024)fail(413,'Request too large');parts.push(chunk);}
+ try{return JSON.parse(Buffer.concat(parts).toString()||'{}');}catch{fail(400,'Invalid JSON');}
+}
+function send(res,status,value){res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.end(JSON.stringify(value));}
+async function limit(c,req,key,max){
+ const ip=process.env.VERCEL==='1'?String(req.headers['x-forwarded-for']||'').split(',')[0]:req.socket?.remoteAddress||'local';
+ for(const [bucket,cap] of [[digest('ip:'+ip),100],[digest(key),max]]){
+  const {rows:[row]}=await c.query('SELECT consume_limit($1,$2) AS allowed',[bucket,cap]);if(!row.allowed)fail(429,'Too many attempts; retry in 15 minutes');
+ }
+}
+export default async function handler(req,res){
+ res.setHeader('Cache-Control','no-store, private');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Vary','Cookie');
+ try{
+  const config=configuration();const url=new URL(req.url,config.origin);
+  const path=String(req.query?.path||url.searchParams.get('path')||url.pathname.replace(/^\/api\/v1\/?/,''));
+  const parts=path.split('/').filter(Boolean),method=req.method;
+  if(path==='config'&&method==='GET'){if(!process.env.DATABASE_URL)fail(503,'Database configuration required');return send(res,200,{mode:'server'});}
+  const mutation=!['GET','HEAD'].includes(method);
+  if(mutation&&req.headers.origin!==config.origin)fail(403,'Origin rejected');
+  const payload=mutation?await body(req):{};
+  if(path==='login'&&method==='POST'){
+   const email=text(payload.email,254).toLowerCase();if(typeof payload.password!=='string'||payload.password.length>128)fail(400,'Invalid credentials');
+   // Rate-limit writes must commit even for failed password attempts.
+   await transaction(c=>limit(c,req,'login:'+email,20));
+   const account=await transaction(async c=>(await c.query('SELECT * FROM auth_lookup($1)',[email])).rows[0]);
+   if(!await verifyPassword(payload.password,account?.password_hash)||!account?.active)fail(401,'Invalid email or password');
+   const value=token(),csrf=token();await transaction(c=>c.query('SELECT session_create($1,$2,$3)',[account.id,digest(value),csrf]));
+   res.setHeader('Set-Cookie',cookie(value));return send(res,200,{ok:true});
+  }
+  if(path==='invitations/accept'&&method==='POST'){
+   await transaction(c=>limit(c,req,'invitation:'+digest(String(payload.token||'')),20));
+   if(typeof payload.token!=='string'||payload.token.length>100||!passwordValid(payload.password))fail(400,'Invalid invitation or password');
+   const hash=await hashPassword(payload.password);
+   const {rows:[row]}=await transaction(c=>c.query('SELECT accept_invitation($1,$2) AS id',[digest(payload.token),hash]));
+   if(!row.id)fail(400,'Invitation invalid, expired or already used');return send(res,200,{ok:true});
+  }
+  const sessionToken=readCookie(req);
+  const user=await transaction(async c=>(await c.query('SELECT * FROM session_lookup($1)',[digest(sessionToken)])).rows[0]);
+  if(!user)fail(401,'Authentication required');
+  if(mutation&&!constantEqual(req.headers['x-csrf-token'],user.csrf))fail(403,'CSRF token rejected');
+  if(path==='session'&&method==='GET')return send(res,200,{user:{id:user.id,email:user.email,role:user.role},csrf:user.csrf});
+  if(path==='logout'&&method==='POST'){await transaction(c=>c.query('SELECT session_remove($1)',[digest(sessionToken)]));res.setHeader('Set-Cookie',cookie('',true));return send(res,200,{ok:true});}
+  const result=await transaction(async c=>{
+   if(path==='summary'&&method==='GET')return (await c.query("SELECT count(*)::int AS total,count(*) FILTER(WHERE status='draft')::int AS draft,count(*) FILTER(WHERE status='finalized')::int AS finalized,count(*) FILTER(WHERE status='archived')::int AS archived FROM documents")).rows[0];
+   if(parts[0]==='users'){
+    admin(user);
+    if(parts.length===1&&method==='GET')return (await c.query(`SELECT ${accountColumns},EXISTS(SELECT 1 FROM invitations i WHERE i.account_id=accounts.id AND i.used_at IS NULL) AS pending FROM accounts ORDER BY created_at`)).rows;
+    if(parts.length===1&&method==='POST'){
+     const email=text(payload.email,254).trim().toLowerCase(),role=payload.role;
+     if(!/^\S+@\S+\.\S+$/.test(email)||!['manager','employee'].includes(role))fail(400,'Invalid email or role');
+     const hash=payload.password?await hashPassword(payload.password):null;
+     const {rows:[account]}=await c.query(`INSERT INTO accounts(email,password_hash,role,active) VALUES($1,$2,$3,$4) RETURNING ${accountColumns}`,[email,hash,role,!!hash]);
+     if(hash)return {account};
+     const secret=token();await c.query("INSERT INTO invitations(account_id,token_hash,expires_at,created_by) VALUES($1,$2,now()+interval '24 hours',$3)",[account.id,digest(secret),user.id]);
+     return {account,invitationURL:config.origin+'/#invite='+secret};
+    }
+    if(parts.length===2&&uuid(parts[1])&&method==='PATCH'){
+     if(parts[1]===user.id)fail(403,'Cannot modify your own role or activity');
+     const {rows:[old]}=await c.query('SELECT role,active FROM accounts WHERE id=$1',[parts[1]]);if(!old||old.role==='administrator')fail(404,'Account unavailable');
+     if(payload.role===undefined&&payload.active===undefined)fail(400,'Account change required');
+     const role=payload.role??old.role,active=payload.active??old.active;
+     if(!['manager','employee'].includes(role)||typeof active!=='boolean')fail(400,'Invalid role or activity');
+     if(payload.active===true&&(await c.query('SELECT 1 FROM invitations WHERE account_id=$1 AND used_at IS NULL',[parts[1]])).rowCount)fail(400,'Pending invitation must be accepted');
+     const {rows:[row]}=await c.query(`UPDATE accounts SET role=$1,active=$2 WHERE id=$3 AND role<>'administrator' RETURNING ${accountColumns}`,[role,active,parts[1]]);
+     if(payload.active===false)await c.query('UPDATE invitations SET used_at=now() WHERE account_id=$1 AND used_at IS NULL',[parts[1]]);
+     if(!row)fail(404,'Account unavailable');return row;
+    }
+    if(parts.length===3&&uuid(parts[1])&&parts[2]==='invitation'&&method==='POST'){
+     const target=(await c.query("SELECT id FROM accounts WHERE id=$1 AND NOT active AND role<>'administrator'",[parts[1]])).rows[0];if(!target)fail(400,'Inactive non-administrator account required');
+     await c.query('UPDATE invitations SET used_at=now() WHERE account_id=$1 AND used_at IS NULL',[parts[1]]);
+     const secret=token();await c.query("INSERT INTO invitations(account_id,token_hash,expires_at,created_by) VALUES($1,$2,now()+interval '24 hours',$3)",[parts[1],digest(secret),user.id]);return {invitationURL:config.origin+'/#invite='+secret};
+    }
+   }
+   if(parts[0]==='audit'&&method==='GET'){admin(user);return (await c.query('SELECT * FROM audit_records ORDER BY id DESC LIMIT 500')).rows;}
+   if(parts[0]==='assets'){
+    staff(user);
+    if(parts.length===1&&method==='POST'){
+     const a=await normalizeAsset(payload);const {rows:[row]}=await c.query('INSERT INTO assets(owner_id,kind,mime,bytes,width,height) VALUES($1,$2,\'image/png\',$3,$4,$5) RETURNING id,kind,width,height',[user.id,a.kind,a.bytes,a.width,a.height]);return row;
+    }
+    if(uuid(parts[1])&&parts.length===3&&parts[2]==='grants'&&['POST','DELETE'].includes(method)){
+     admin(user);if(!uuid(payload.accountId))fail(400,'Invalid account');if(method==='DELETE'){await c.query('DELETE FROM asset_grants WHERE asset_id=$1 AND account_id=$2',[parts[1],payload.accountId]);return {ok:true};}await c.query('INSERT INTO asset_grants(asset_id,account_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[parts[1],payload.accountId]);return {ok:true};
+    }
+    if(uuid(parts[1])&&parts.length===2&&method==='GET'){
+     const {rows:[a]}=await c.query('SELECT * FROM assets a WHERE id=$1 AND (admin() OR owner_id=$2 OR EXISTS(SELECT 1 FROM asset_grants g WHERE g.asset_id=a.id AND g.account_id=$2))',[parts[1],user.id]);if(!a)fail(404,'Asset unavailable');return {binary:a.bytes};
+    }
+    if(uuid(parts[1])&&parts.length===2&&method==='DELETE'){
+     const {rowCount}=await c.query('DELETE FROM assets WHERE id=$1 RETURNING id',[parts[1]]);if(!rowCount)fail(404,'Asset unavailable');return {ok:true};
+    }
+   }
+   if(parts[0]==='templates'){
+    staff(user);
+    if(parts.length===1&&method==='GET')return (await c.query('SELECT * FROM templates ORDER BY key')).rows;
+    if((method==='POST'&&parts.length===1)||(method==='PATCH'&&uuid(parts[1])&&parts.length===2)){
+     const values=[text(payload.key,80),text(payload.name_fa,200),text(payload.name_en,200),text(payload.body_fa,200000),text(payload.body_en,200000)];
+     if(!/^[a-z0-9-]+$/.test(values[0]))fail(400,'Invalid template key');
+     if(method==='POST')return (await c.query('INSERT INTO templates(key,name_fa,name_en,body_fa,body_en) VALUES($1,$2,$3,$4,$5) RETURNING *',values)).rows[0];
+     const {rows:[row]}=await c.query('UPDATE templates SET key=$1,name_fa=$2,name_en=$3,body_fa=$4,body_en=$5,version=version+1,updated_at=now() WHERE id=$6 AND version=$7 RETURNING *',[...values,parts[1],payload.version]);if(!row)fail(409,'Template version conflict');return row;
+    }
+    if(method==='DELETE'&&uuid(parts[1])){const {rowCount}=await c.query('DELETE FROM templates WHERE id=$1 AND version=$2',[parts[1],payload.version]);if(!rowCount)fail(409,'Template version conflict');return {ok:true};}
+   }
+   if(parts[0]==='documents'){
+    if(parts.length===1&&method==='GET'){
+     const q=text(url.searchParams.get('q')||'',200);
+     const offset=Number(url.searchParams.get('offset')||0),status=url.searchParams.get('status')||'',type=url.searchParams.get('type')||'';
+     if(!Number.isSafeInteger(offset)||offset<0||offset>1000000||!['','draft','finalized','archived'].includes(status)||!['','letter','invoice','receipt','delivery','transaction','custom'].includes(type))fail(400,'Invalid search filters');
+     const rows=(await c.query("SELECT id,title,number,recipient,type,language,status,version,updated_at,created_by,import_key FROM documents WHERE (title ILIKE '%'||$1||'%' OR number ILIKE '%'||$1||'%' OR recipient ILIKE '%'||$1||'%') AND ($2='' OR status=$2) AND ($3='' OR type=$3) ORDER BY updated_at DESC,id LIMIT 1000 OFFSET $4",[q,status,type,offset])).rows;
+     return rows.map(r=>({...r,updated:r.updated_at,importKey:r.import_key}));
+    }
+    const id=parts[1];if(id&&!uuid(id))fail(404,'Document unavailable');
+    if(parts.length===4&&parts[2]==='assets'&&uuid(parts[3])&&method==='GET'){
+     const {rows:[asset]}=await c.query('SELECT a.bytes FROM documents d JOIN document_assets l ON l.document_id=d.id JOIN assets a ON a.id=l.asset_id WHERE d.id=$1 AND a.id=$2',[id,parts[3]]);if(!asset)fail(404,'Asset unavailable');return {binary:asset.bytes};
+    }
+    if(parts.length===2&&method==='GET'){const {rows:[d]}=await c.query('SELECT * FROM documents WHERE id=$1',[id]);if(!d)fail(404,'Document unavailable');return wire(d);}
+    staff(user);
+    if(parts.length===3&&['print','export'].includes(parts[2])&&method==='POST'){
+     const {rows:[d]}=await c.query('SELECT * FROM documents WHERE id=$1',[id]);if(!d)fail(404,'Document unavailable');
+     // Audit insertion is a narrow definer function, never a general table grant.
+     await c.query('SELECT audit_output($1,$2)',[id,parts[2]]);return wire(d);
+    }
+    if(parts.length===3&&parts[2]==='duplicate'&&method==='POST'){
+     const {rows:[source]}=await c.query('SELECT * FROM documents WHERE id=$1',[id]);if(!source)fail(404,'Document unavailable');
+     const content={...source.content,title:source.title+' — Copy',marks:{...source.content.marks}};
+     for(const kind of ['signature','stamp'])if(content.marks[kind]&&!(await c.query('SELECT can_apply_asset($1) AS ok',[content.marks[kind].assetId])).rows[0].ok)content.marks[kind]=null;
+     if(content.letterheadAsset&&!(await c.query('SELECT can_apply_asset($1) AS ok',[content.letterheadAsset])).rows[0].ok){content.letterhead=`official-${source.language}`;delete content.letterheadAsset;}
+     const allowed=await verifyAssets(c,content,user.id);
+     const copied=(await c.query('INSERT INTO documents(title,number,recipient,type,language,content,created_by) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *',[content.title,content.number,content.recipient,content.type,content.language,content,user.id])).rows[0];await linkAssets(c,copied.id,allowed);return wire(copied);
+    }
+    if(parts.length===1&&method==='POST'){
+     const d=validateDocument(payload);const assets=await verifyAssets(c,d,user.id);
+     const key=payload.importKey?text(payload.importKey,200):null;
+     if(key){const prior=await c.query('SELECT * FROM documents WHERE import_owner=$1 AND import_key=$2',[user.id,key]);if(prior.rowCount)return wire(prior.rows[0]);}
+     const {rows:[row]}=await c.query('INSERT INTO documents(title,number,recipient,type,language,content,created_by,import_owner,import_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',[d.title,d.number,d.recipient,d.type,d.language,d,user.id,key?user.id:null,key]);await linkAssets(c,row.id,assets);return wire(row);
+    }
+    if(parts.length===2&&['PATCH','DELETE'].includes(method)){
+     const {rows:[old]}=await c.query('SELECT * FROM documents WHERE id=$1 FOR UPDATE',[id]);if(!old)fail(404,'Document unavailable');if(payload.version!==old.version)fail(409,'Document changed; reload before saving');
+     if(method==='DELETE'){const {rows:[deleted]}=await c.query('SELECT delete_document($1,$2) AS ok',[id,payload.version]);if(!deleted.ok)fail(409,'Document version conflict');return {ok:true};}
+     const d=validateDocument(payload),status=payload.status||old.status;if(!['draft','finalized','archived'].includes(status))fail(400,'Invalid status');
+     const assets=await verifyAssets(c,d,user.id,id);
+     const {rows:[row]}=await c.query('UPDATE documents SET title=$1,number=$2,recipient=$3,type=$4,language=$5,status=$6,content=$7,version=version+1,updated_at=now() WHERE id=$8 RETURNING *',[d.title,d.number,d.recipient,d.type,d.language,status,d,id]);await linkAssets(c,id,assets);return wire(row);
+    }
+   }
+   fail(404,'Route unavailable');
+  },user.id);
+  if(result?.binary){res.setHeader('Content-Type','image/png');res.setHeader('Content-Disposition','inline');res.end(result.binary);return;}
+  send(res,200,result);
+ }catch(e){
+  const known=e.status||({'23505':409,'23514':409,'23503':409,'42501':403,'22P02':400}[e.code]);
+  const status=known||500;
+  if(!known)console.error('Rimdan API failure',e.code||e.name);
+  send(res,status,{error:known?(e.status?e.message:status===409?'Constraint or reference conflict':'Access denied'):'Server operation failed'});
+ }
+}

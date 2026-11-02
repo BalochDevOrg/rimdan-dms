@@ -1,0 +1,7 @@
+.auth-panel{max-width:460px;margin:40px auto}.auth-panel label,.cloud-panel label{display:block;font-weight:600;font-size:13px;margin:14px 0 6px}.auth-panel input,.cloud-panel input,.cloud-panel select{min-height:48px;font-size:16px}.auth-panel button{margin-top:20px;width:100%}.cloud-panel{margin-top:20px}.cloud-panel textarea{min-height:140px}.cloud-panel form{display:grid;gap:8px}.cloud-accounts>div{display:flex;flex-wrap:wrap;align-items:center;gap:12px;border-bottom:1px solid #d8e0ea;padding:18px 0;overflow-wrap:anywhere}.cloud-accounts select{min-width:130px}#cloudError{color:#934523;line-height:1.8}.employee-print-warning{display:none}
+html[data-auth=signed-out] .sidebar,html[data-auth=signed-out] #menuBtn,html[data-auth=signed-out] .crumb,html[data-auth=signed-out] #cloudLogout{display:none!important}
+html[data-role=employee] .document-mark{pointer-events:none!important}html[data-role=employee] .document-mark button{display:none!important}html[data-role=employee] #previewPane{position:relative;visibility:visible;left:auto;width:100%}html[data-role=employee] .preview-caption{padding-inline-end:50px}
+@media print{html[data-role=employee] .app,html[data-role=employee] .toast{display:none!important}html[data-role=employee] .employee-print-warning{display:block;text-align:center;font-size:18px}}
+
+[hidden]{display:none!important}
+.sidebar .user>div{min-width:0;overflow-wrap:anywhere}.sidebar .user strong{font-size:12px}

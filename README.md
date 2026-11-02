@@ -1,10 +1,10 @@
 # Rimdan Trade — Document Studio Prototype
 
-Bilingual Persian RTL / English LTR static document workspace. This is a browser-local prototype, not secure cloud storage or multi-user document management.
+Bilingual Persian RTL / English LTR document workspace with an optional Node/PostgreSQL multi-user backend. The checked-in HTML remains an explicit browser-local prototype; the normal Vercel build enables authenticated server mode. See [backend architecture and setup](BACKEND.md) before configuring company data.
 
 ## Run
 
-From the checkout, run `python3 -m http.server 8000 --bind 127.0.0.1` and open the local server in your browser. There is no build step, package installation, database, or application credential requirement.
+For the original prototype without backend credentials, run `python3 -m http.server 8000 --bind 127.0.0.1` only in a development checkout containing no secrets, or build a public-only prototype using `npm ci` and `RIMDAN_MODE=prototype npm run build` and serve `public/`. For authenticated mode, follow BACKEND.md, then use `npm run dev`. The normal `npm run build` creates a server-mode frontend and never runs migrations or creates users.
 
 ## Document workspace
 
@@ -25,7 +25,7 @@ Both images are fitted and centered on physical 210 × 297 mm A4 pages without s
 
 Editable date and document number values occupy the artwork's printed entry lines, using language-specific physical offsets; labels are not duplicated. Persian dates use the Persian calendar, English dates use day/month/year. The native date input continues to store Gregorian ISO dates. Subject, recipient and body start at 98 mm from the page top and stop at 242 mm, protecting both letterheads' header, printed fields and footer. Very long metadata fields are constrained to their allotted spaces and trigger a warning; shorten them before printing. Body text is measured with the actual typography and split across additional A4 pages without dropping characters. Each page repeats the background, date/number, subject and recipient. Signature/stamp placements remain on the first page only. This is automatic pagination, not a full word processor with manual page breaks or rich-text selection formatting.
 
-The existing custom-image import remains available under **Company letterhead**. Import PNG/JPEG/WebP up to 3 MB, at least 400 × 600 pixels. It explicitly switches the current draft to a custom pad, embeds that image in the draft, and marks the draft unsaved. Choose the official option or remove the custom pad to restore the language-appropriate default; save to persist this choice. Legacy browser-wide imported images remain available for explicit custom selection, but never replace official defaults automatically. Custom date offsets and safe writing areas assume a compatible layout and require manual review.
+The existing custom-image import remains available under **Company letterhead**. Import PNG/JPEG/WebP up to 3 MB, at least 400 × 600 pixels. It explicitly switches the current draft to a custom pad and marks the draft unsaved. Prototype mode embeds that image in the local draft; server mode stores a private database asset reference. Choose the official option or remove the custom pad to restore the language-appropriate default; save to persist this choice. In prototype mode, legacy browser-wide imported images remain available for explicit custom selection, but never replace official defaults automatically. Custom date offsets and safe writing areas assume a compatible layout and require manual review.
 
 Preview zoom changes only screen scale, including mobile. All pages print at A4 with the same internal layout and full-page image fit, even without a signature/stamp. Choose 100% scale and disable browser headers/footers. Physical edge-to-edge output requires a borderless-capable printer. Original raster resolution limits print sharpness; no synthetic upscaling is applied. Review generated PDFs and physical printer output before business use.
 
@@ -75,4 +75,4 @@ Start the static server first. Override `RIMDAN_TEST_URL` if needed, `RIMDAN_TES
 
 ## Limitations
 
-No authentication, database, synchronization, approvals, audit history, backup, secure storage, or access controls. Clearing browser storage removes drafts and imported artwork. Use fictional data only. Google Fonts are optional external requests; local fallback fonts are provided. Actual printed output and localized typography require review on target browsers/printers. Interface labels and starter templates are bilingual; user-authored content is never automatically translated.
+Standalone prototype mode has no authentication, database, synchronization, approvals, audit history, backup, secure storage, or access controls. The new backend supplies sessions, roles, PostgreSQL storage and audits, but is not deployed/configured for production; operational limits and permission/printing boundaries are documented in BACKEND.md. Clearing browser storage removes prototype drafts and imported artwork, not server records. Use fictional data only. Google Fonts are optional external requests; local fallback fonts are provided. Actual printed output and localized typography require review on target browsers/printers. Interface labels and starter templates are bilingual; user-authored content is never automatically translated.

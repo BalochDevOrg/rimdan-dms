@@ -53,7 +53,7 @@ const MobileUX = (() => {
   function syncMarks() {
     const scroll=document.getElementById('previewScroll');if(!scroll)return;
     scroll.classList.toggle('adjusting-marks',adjusting);
-    document.getElementById('adjustMarks').setAttribute('aria-pressed',String(adjusting));
+    document.getElementById('adjustMarks')?.setAttribute('aria-pressed',String(adjusting));
     document.getElementById('previewInteraction').textContent=text(adjusting?'unlocked':'locked');
     scroll.querySelectorAll('.document-mark').forEach(n=>{
       n.tabIndex=adjusting?0:-1;
@@ -75,7 +75,7 @@ const MobileUX = (() => {
   function previewHeight(scroll) {
     const panel=document.getElementById('previewPane'),bar=document.querySelector('.editor-actions-bar');
     const extras=Math.max(0,panel.offsetHeight-scroll.offsetHeight);
-    const chrome=compact.matches?document.querySelector('.topbar').offsetHeight+document.querySelector('.editor-tabs').offsetHeight+24:Math.max(16,panel.getBoundingClientRect().top);
+    const chrome=compact.matches?document.querySelector('.topbar').offsetHeight+(document.querySelector('.editor-tabs')?.offsetHeight||0)+24:Math.max(16,panel.getBoundingClientRect().top);
     const available=Math.max(220,(window.visualViewport?.height||innerHeight)-chrome-extras-(bar?.offsetHeight||80)-24);
     scroll.style.maxHeight=available+'px';
   }
@@ -185,5 +185,5 @@ const MobileUX = (() => {
     window.visualViewport?.addEventListener('resize',()=>viewport());window.visualViewport?.addEventListener('scroll',()=>viewport(false));window.addEventListener('resize',()=>viewport());viewport();
   }
   function afterRender() { syncNavigation();if(page!=='editor')observer?.disconnect();attachEditor(); }
-  return {tabs,toolbar,actions,reset,scaleFor,previewHeight,editorMessage,setView,syncMarks,closeNavigation,installNavigation,afterRender};
+  return {tabs,toolbar,actions,reset,scaleFor,previewHeight,editorMessage,setZoom,setView,syncMarks,closeNavigation,installNavigation,afterRender};
 })();
