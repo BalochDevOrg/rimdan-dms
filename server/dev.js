@@ -1,9 +1,10 @@
 import http from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {resolve,extname} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import handler from './api.js';
 const files=new Set(['index.html','styles.css','mobile.css','script.js','document-marks.js','letterheads.js','mobile-ux.js','server-client.js','server-client.css']);
-const root=resolve(new URL('..',import.meta.url).pathname);
+const root=fileURLToPath(new URL('..',import.meta.url));
 http.createServer(async(req,res)=>{
  if(req.url.startsWith('/api/v1/'))return handler(req,res);
  try{

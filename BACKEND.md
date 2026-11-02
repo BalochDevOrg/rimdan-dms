@@ -1,5 +1,9 @@
 # Multi-user backend: architecture, operation and review
 
+> **Supabase safety blocker — hardening is NOT implemented.** The seven current migrations are unsafe to apply unchanged to Supabase. Supabase can explicitly grant `anon`, `authenticated` and `service_role` privileges on newly created public objects; revoking from `PUBLIC` does not remove those grants. A local reproduction confirmed API-role execution of sensitive authentication/session functions and write access to `schema_migrations` (which lacks RLS). Do not follow the generic remote operator instructions below for Supabase yet. First approve and implement additive application-specific ACL hardening and denial tests; disable the Data API/automatic exposure before creating application objects and verify all grants. A non-exposed private application schema is recommended. No Supabase-specific patch or eighth migration exists in this branch. Do not rewrite the seven existing migration checksums.
+
+For Windows local development, follow [WINDOWS_SETUP.md](WINDOWS_SETUP.md). The local runbook uses PostgreSQL only, without Supabase Auth or any remote migration. `npm run dev` reads `.env` followed by `.env.local`; the latter overrides duplicate file values, while existing process environment values take precedence. Migration and bootstrap commands load environment files only when explicitly requested with Node's `--env-file` option. Neither command runs during installation, build or startup.
+
 This branch adds a server-side application to a formerly static-only prototype. It has been validated with disposable local PostgreSQL databases and local HTTP servers. **No production database, live account, deployment or Vercel project has been changed.** Production rollout requires separate approval, credentials and operator validation.
 
 ## Minimum integration
