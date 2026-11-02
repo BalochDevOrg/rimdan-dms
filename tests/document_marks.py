@@ -79,6 +79,7 @@ with sync_playwright() as p:
             page.locator(f'#{kind}-{key}').fill(value)
             page.locator(f'#{kind}-{key}').press('Tab')
         inside(marks(page)[kind])
+    page.locator('#adjustMarks').click()
     # Numeric positioning and keyboard movement/resizing, in physical directions.
     for key, value in [('width','48'),('x','35'),('y','210')]:
         page.locator(f'#signature-{key}').fill(value);page.locator(f'#signature-{key}').press('Tab')
@@ -144,6 +145,8 @@ with sync_playwright() as p:
     page.locator('#saveBtn').click()
     # Mobile real touchscreen drag, drawing, and 44px resize target.
     page.set_viewport_size({'width':390,'height':844})
+    page.locator('#previewTab').click()
+    if page.locator('#adjustMarks').get_attribute('aria-pressed')=='false':page.locator('#adjustMarks').click()
     node=page.locator('[data-mark=stamp] .mark-move');node.scroll_into_view_if_needed();box=node.bounding_box();before=marks(page)['stamp']
     assert box['width']>=43 and box['height']>=43
     x=box['x']+box['width']/3;y=box['y']+box['height']/3
@@ -158,6 +161,7 @@ with sync_playwright() as p:
     cdp.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{'x':x-10,'y':y}]})
     cdp.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
     assert marks(page)['stamp']['width']<before
+    page.locator('#editTab').click()
     canvas.scroll_into_view_if_needed();box=canvas.bounding_box();x=box['x']+20;y=box['y']+20
     cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':x,'y':y}]})
     cdp.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{'x':x+50,'y':y+15}]})
@@ -189,6 +193,7 @@ with sync_playwright() as p:
         box=page.locator(f'[data-mark={kind}]').bounding_box();paper=page.locator('#paper').bounding_box()
         assert abs((box['x']-paper['x'])-marks(page)[kind]['x']*96/25.4)<1
     page.emulate_media(media='screen')
+    page.locator('.document-setup').evaluate('(e)=>e.open=true')
     page.locator('.letterhead-controls summary').click()
     page.locator('#letterheadFile').set_input_files(dict(name='blank-letterhead.png',mimeType='image/png',buffer=fixture(page,width=840,height=1188,white=True)))
     expect(page.locator('#paper')).to_have_attribute('data-pad','custom')

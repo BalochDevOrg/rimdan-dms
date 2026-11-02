@@ -70,7 +70,7 @@ const DocumentMarks = (() => {
         <input id="${kind}-file" type="file" accept="image/png,image/jpeg,image/webp">
         ${kind === 'signature' ? `<label class="mark-check"><input type="checkbox" id="signature-white">${text('transparent')}</label>
         <details class="signature-drawing"><summary>${text('draw')}</summary>
-          <canvas id="signature-canvas" width="720" height="240" aria-label="${text('canvas')}"></canvas>
+          <canvas id="signature-canvas" width="720" height="420" aria-label="${text('canvas')}"></canvas>
           <label class="mark-check"><input id="drawing-transparent" type="checkbox" checked>${text('background')}</label>
           <div class="mark-actions"><button type="button" id="clear-drawing">${text('clearDrawing')}</button><button type="button" id="preview-drawing">${text('useDrawing')}</button></div>
         </details>` : ''}
@@ -187,10 +187,14 @@ const DocumentMarks = (() => {
       node.querySelector('.mark-move').setAttribute('aria-label',`${text('move')} ${text(kind)}`);
       Object.assign(node.style,{left:`${mark.x}mm`,top:`${mark.y}mm`,width:`${mark.width}mm`,height:`${mark.width/mark.ratio}mm`});
     }
+    MobileUX.syncMarks();
   }
 
   function startDrag(event, kind, node, resizing) {
     if (event.button !== 0) return;
+    // Finger/pen scrolling over the image stays native, even in placement mode.
+    // Deliberate touch movement starts only from the large move/resize buttons.
+    if (event.pointerType !== 'mouse' && !event.target.closest('button')) return;
     event.preventDefault(); node.focus();
     const target = resizing ? node.querySelector('.mark-resize') : node;
     const mark = {...working.marks[kind]}, x = event.clientX, y = event.clientY;

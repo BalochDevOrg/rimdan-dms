@@ -41,7 +41,7 @@ with sync_playwright() as p:
   page.set_viewport_size({'width':width,'height':1000});page.wait_for_timeout(100)
   if width==390:
    page.locator('#menuBtn').click();assert page.locator('#menuBtn').get_attribute('aria-expanded')=='true'
-   page.locator('#menuBtn').click();assert page.locator('#menuBtn').get_attribute('aria-expanded')=='false'
+   page.locator('#closeNav').click();assert page.locator('#menuBtn').get_attribute('aria-expanded')=='false'
   if width==390:page.screenshot(path=str(ARTIFACTS/'rimdan-mobile-workspace.png'),full_page=True)
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),width
  page.screenshot(path=str(ARTIFACTS/'rimdan-workspace.png'),full_page=True)

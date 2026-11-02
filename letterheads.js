@@ -93,11 +93,16 @@ const Letterheads = (() => {
     fitPages();
   }
   function fitPages() {
-    const width = document.getElementById('paperViewport')?.clientWidth;
-    if (!width) return;
-    const scale = Math.min(1,width/(210*96/25.4));
+    const scroll=document.getElementById('previewScroll');
+    const viewport=document.getElementById('paperViewport');
+    if (!scroll || !viewport || !scroll.clientWidth) return;
+    MobileUX.previewHeight(scroll);
+    const style=getComputedStyle(scroll);
+    const maxHeight=Math.max(parseFloat(style.minHeight)||0,parseFloat(style.maxHeight)||Infinity);
+    const scale=MobileUX.scaleFor(Math.max(1,scroll.clientWidth-16),maxHeight-16);
+    viewport.style.width=(210*96/25.4*scale)+'px';
     document.querySelectorAll('#paperViewport .preview-paper').forEach(p => {
-      p.style.zoom = scale; p.style.setProperty('--mark-control-scale',1/scale);
+      p.style.zoom=scale;p.style.setProperty('--mark-control-scale',1/scale);
     });
   }
   function attach() {
@@ -110,6 +115,7 @@ const Letterheads = (() => {
   }
   // Browser print/PDF must use the same measured pages even after font loading.
   window.addEventListener('beforeprint',()=>{if(typeof page!=='undefined' && page==='editor') paginate();});
+  window.addEventListener('afterprint',()=>{if(typeof page!=='undefined' && page==='editor') fitPages();});
   document.fonts?.ready.then(()=>{if(typeof page!=='undefined' && page==='editor') {paginate();}});
   return {controls,apply,paginate,fitPages,attach,selection};
 })();
