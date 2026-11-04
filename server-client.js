@@ -145,7 +145,7 @@ const ServerClient=(()=>{
    const rows=await api('documents?q='+encodeURIComponent(windowSearch())+'&status='+encodeURIComponent(statusFilter)+'&type='+encodeURIComponent(typeFilter)+'&offset='+offset);
    if(generation!==searchVersion||page!=='documents')return;
    docs=append?docs.concat(rows):rows;nextOffset=rows.length===1000?offset+1000:null;
-   document.getElementById('docList').innerHTML=docTable(docs);document.querySelectorAll('[data-open]').forEach(n=>n.onclick=e=>{e.stopPropagation();open(n.dataset.open);});moreButton();
+   document.getElementById('docList').innerHTML=docTable(docs);document.querySelectorAll('[data-open]').forEach(n=>n.onclick=e=>{e.stopPropagation();open(n.dataset.open);});if(typeof bindPreviewButtons==='function')bindPreviewButtons();moreButton();
   }catch(e){error(e);}},append?0:180);
  }
  function windowSearch(){return document.getElementById('searchInput')?.value||'';}
