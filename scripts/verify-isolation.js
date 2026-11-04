@@ -2,8 +2,8 @@ import {fileURLToPath} from 'node:url';
 import {database} from '../server/db.js';
 import {logFailure} from '../server/errors.js';
 import {ownerURL} from './owner-connection.js';
-export const tables=['accounts','sessions','invitations','auth_buckets','documents','assets','asset_grants','document_assets','templates','audit_records','schema_migrations'];
-export const functions=['enforce_administrator()','actor_id()','actor_role()','staff()','admin()','protect_account()','record_changes()','auth_lookup(text)','session_lookup(text)','session_create(uuid,text,text)','session_remove(text)','consume_limit(text,integer)','accept_invitation(text,text)','audit_output(uuid,text)','can_apply_asset(uuid)','delete_document(uuid,integer)','revoke_deactivated_sessions()'];
+export const tables=['accounts','sessions','invitations','auth_buckets','documents','assets','asset_grants','document_assets','templates','audit_records','schema_migrations','document_recipients','password_resets'];
+export const functions=['enforce_administrator()','actor_id()','actor_role()','staff()','admin()','protect_account()','record_changes()','auth_lookup(text)','session_lookup(text)','session_create(uuid,text,text)','session_remove(text)','consume_limit(text,integer)','accept_invitation(text,text)','audit_output(uuid,text)','can_apply_asset(uuid)','delete_document(uuid,integer)','revoke_deactivated_sessions()','can_access_document(uuid,uuid,text,text)','can_manage_document(uuid)','list_share_targets()','issue_password_reset(uuid,text)','redeem_password_reset(text,text)','audit_recipient_change()'];
 // Read-only: checks effective privileges (including inherited/PUBLIC grants),
 // not just ACL rows. This remains useful even when the Data API is disabled.
 export async function verifyIsolation(c,{requireApiRoles=false}={}){
