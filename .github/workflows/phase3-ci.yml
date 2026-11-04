@@ -40,6 +40,15 @@ jobs:
         run: npm run build
       - name: Validate built Phase 3 assets
         run: node scripts/check-built-assets.js
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install isolated browser smoke test dependencies
+        run: |
+          python -m pip install playwright==1.55.0
+          python -m playwright install --with-deps chromium
+      - name: Verify login page responsiveness without a database
+        run: python tests/browser_startup.py
       - name: Dependency audit
         run: npm audit --omit=dev --audit-level=high
       - name: Verify baseline SQL was not rewritten
