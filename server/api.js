@@ -3,6 +3,15 @@ import {logFailure,requestId} from './errors.js';
 import {token,digest,hashPassword,verifyPassword,passwordValid,configuration,cookie,readCookie,constantEqual} from './auth.js';
 import {fail,uuid,text,validateDocument,verifyAssets,linkAssets,normalizeAsset,wire} from './documents.js';
 const accountColumns='id,email,role,active,created_at,has_password';
+function audienceOf(value,fallback='all'){const v=value===undefined?fallback:value;if(!['all','selected'].includes(v))fail(400,'Invalid audience');return v;}
+async function share(c,id,mode,ids,actor){
+ const list=mode==='all'?[]:ids;
+ if(!Array.isArray(list)||list.length>100||list.some(x=>!uuid(x))||new Set(list).size!==list.length)fail(400,'Invalid recipients');
+ if(list.length&&(await c.query('SELECT id FROM list_share_targets() WHERE id=ANY($1::uuid[])',[list])).rowCount!==list.length)fail(400,'Recipient unavailable');
+ await c.query('DELETE FROM document_recipients WHERE document_id=$1 AND NOT(account_id=ANY($2::uuid[]))',[id,list]);
+ for(const account of list)await c.query('INSERT INTO document_recipients(document_id,account_id,granted_by) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[id,account,actor]);
+}
+async function sharedWire(c,d){const audience=d.audience||'all';const visibleTo=audience==='selected'?(await c.query('SELECT account_id FROM document_recipients WHERE document_id=$1 ORDER BY account_id',[d.id])).rows.map(r=>r.account_id):[];return {...wire(d),audience,visibleTo};}
 const staff=user=>{if(!['administrator','manager'].includes(user.role))fail(403,'Read-only account');};
 const admin=user=>{if(user.role!=='administrator')fail(403,'Administrator required');};
 async function body(req){
@@ -34,7 +43,7 @@ export default async function handler(req,res){
   const url=new URL(req.url,'https://request.invalid');
   const path=String(req.query?.path||url.searchParams.get('path')||url.pathname.replace(/^\/api\/v1\/?/,''));
   const parts=path.split('/').filter(Boolean),method=req.method;
-  route=['config','login','session','logout','ready','documents','assets','templates','users','invitations','audit','summary'].includes(parts[0])?parts[0]:'unknown';
+  route=['config','login','session','logout','ready','documents','assets','templates','users','invitations','audit','summary','share-targets','password-reset'].includes(parts[0])?parts[0]:'unknown';
   const config=configuration();
   if(path==='config'&&method==='GET'){databaseOptions();return send(res,200,{mode:'server'});}
   stage='request_validation';
@@ -57,6 +66,20 @@ export default async function handler(req,res){
    const {rows:[row]}=await transaction(c=>c.query('SELECT accept_invitation($1,$2) AS id',[digest(payload.token),hash]));
    if(!row.id)fail(400,'Invitation invalid, expired or already used');return send(res,200,{ok:true});
   }
+  if(path==='password-reset/accept'&&method==='POST'){
+   stage='password_reset';const secret=typeof payload.token==='string'?payload.token:'';
+   await transaction(c=>limit(c,req,'reset:'+digest(secret),12));
+   if(secret.length<20||secret.length>100||!passwordValid(payload.password))fail(400,'Invalid or expired recovery link');
+   const hash=await hashPassword(payload.password);
+   const {rows:[r]}=await transaction(c=>c.query('SELECT redeem_password_reset($1,$2) AS ok',[digest(secret),hash]));
+   if(!r.ok)fail(400,'Invalid or expired recovery link');
+   return send(res,200,{ok:true});
+  }
+  if(path==='password-reset/request'&&method==='POST'){
+   stage='password_reset_request';const address=text(payload.email||'',254).trim().toLowerCase();
+   await transaction(c=>limit(c,req,'reset-request:'+digest(address),8));
+   return send(res,200,{message:'Contact your company Administrator for a secure recovery link.'});
+  }
   stage='session_lookup';const sessionToken=readCookie(req);
   const user=await transaction(async c=>(await c.query('SELECT * FROM session_lookup($1)',[digest(sessionToken)])).rows[0]);
   if(!user)fail(401,'Authentication required');
@@ -66,6 +89,7 @@ export default async function handler(req,res){
   stage='resource';
   const result=await transaction(async c=>{
    if(path==='ready'&&method==='GET'){admin(user);await c.query('SELECT 1');return {ready:true};}
+    if(path==='share-targets'&&method==='GET'){staff(user);return (await c.query('SELECT * FROM list_share_targets()')).rows;}
    if(path==='summary'&&method==='GET')return (await c.query("SELECT count(*)::int AS total,count(*) FILTER(WHERE status='draft')::int AS draft,count(*) FILTER(WHERE status='finalized')::int AS finalized,count(*) FILTER(WHERE status='archived')::int AS archived FROM documents")).rows[0];
    if(parts[0]==='users'){
     admin(user);
@@ -90,7 +114,12 @@ export default async function handler(req,res){
      if(payload.active===false)await c.query('UPDATE invitations SET used_at=now() WHERE account_id=$1 AND used_at IS NULL',[parts[1]]);
      if(!row)fail(404,'Account unavailable');return row;
     }
-    if(parts.length===3&&uuid(parts[1])&&parts[2]==='invitation'&&method==='POST'){
+    if(parts.length===3&&uuid(parts[1])&&parts[2]==='recovery'&&method==='POST'){
+      const secret=token(),r=await c.query('SELECT issue_password_reset($1,$2) AS ok',[parts[1],digest(secret)]);
+      if(!r.rows[0].ok)fail(404,'Active account unavailable');
+      return {recoveryURL:config.origin+'/#reset='+secret,delivery:'manual',expiresMinutes:30};
+     }
+     if(parts.length===3&&uuid(parts[1])&&parts[2]==='invitation'&&method==='POST'){
      const target=(await c.query("SELECT id FROM accounts WHERE id=$1 AND NOT active AND role<>'administrator'",[parts[1]])).rows[0];if(!target)fail(400,'Inactive non-administrator account required');
      await c.query('UPDATE invitations SET used_at=now() WHERE account_id=$1 AND used_at IS NULL',[parts[1]]);
      const secret=token();await c.query("INSERT INTO invitations(account_id,token_hash,expires_at,created_by) VALUES($1,$2,now()+interval '24 hours',$3)",[parts[1],digest(secret),user.id]);return {invitationURL:config.origin+'/#invite='+secret};
@@ -128,20 +157,20 @@ export default async function handler(req,res){
      const q=text(url.searchParams.get('q')||'',200);
      const offset=Number(url.searchParams.get('offset')||0),status=url.searchParams.get('status')||'',type=url.searchParams.get('type')||'';
      if(!Number.isSafeInteger(offset)||offset<0||offset>1000000||!['','draft','finalized','archived'].includes(status)||!['','letter','invoice','receipt','delivery','transaction','custom'].includes(type))fail(400,'Invalid search filters');
-     const rows=(await c.query("SELECT id,title,number,recipient,type,language,status,version,updated_at,created_by,import_key FROM documents WHERE (title ILIKE '%'||$1||'%' OR number ILIKE '%'||$1||'%' OR recipient ILIKE '%'||$1||'%') AND ($2='' OR status=$2) AND ($3='' OR type=$3) ORDER BY updated_at DESC,id LIMIT 1000 OFFSET $4",[q,status,type,offset])).rows;
+     const rows=(await c.query("SELECT id,title,number,recipient,type,language,status,audience,version,updated_at,created_by,import_key FROM documents WHERE (title ILIKE '%'||$1||'%' OR number ILIKE '%'||$1||'%' OR recipient ILIKE '%'||$1||'%') AND ($2='' OR status=$2) AND ($3='' OR type=$3) ORDER BY updated_at DESC,id LIMIT 1000 OFFSET $4",[q,status,type,offset])).rows;
      return rows.map(r=>({...r,updated:r.updated_at,importKey:r.import_key}));
     }
     const id=parts[1];if(id&&!uuid(id))fail(404,'Document unavailable');
     if(parts.length===4&&parts[2]==='assets'&&uuid(parts[3])&&method==='GET'){
      const {rows:[asset]}=await c.query('SELECT a.bytes FROM documents d JOIN document_assets l ON l.document_id=d.id JOIN assets a ON a.id=l.asset_id WHERE d.id=$1 AND a.id=$2',[id,parts[3]]);if(!asset)fail(404,'Asset unavailable');return {binary:asset.bytes};
     }
-    if(parts.length===2&&method==='GET'){const {rows:[d]}=await c.query('SELECT * FROM documents WHERE id=$1',[id]);if(!d)fail(404,'Document unavailable');return wire(d);}
+    if(parts.length===2&&method==='GET'){const {rows:[d]}=await c.query('SELECT * FROM documents WHERE id=$1',[id]);if(!d)fail(404,'Document unavailable');return sharedWire(c,d);}
     staff(user);
     if(parts.length===3&&['print','export'].includes(parts[2])&&method==='POST'){
      const {rows:[d]}=await c.query('SELECT * FROM documents WHERE id=$1 FOR SHARE',[id]);if(!d)fail(404,'Document unavailable');
      if(!Number.isSafeInteger(payload.version)||payload.version!==d.version)fail(409,'Document changed; reopen before printing or exporting');
      // Audit insertion is a narrow definer function, never a general table grant.
-     await c.query('SELECT audit_output($1,$2)',[id,parts[2]]);return wire(d);
+     await c.query('SELECT audit_output($1,$2)',[id,parts[2]]);return sharedWire(c,d);
     }
     if(parts.length===3&&parts[2]==='duplicate'&&method==='POST'){
      const {rows:[source]}=await c.query('SELECT * FROM documents WHERE id=$1',[id]);if(!source)fail(404,'Document unavailable');
@@ -149,20 +178,24 @@ export default async function handler(req,res){
      for(const kind of ['signature','stamp'])if(content.marks[kind]&&!(await c.query('SELECT can_apply_asset($1) AS ok',[content.marks[kind].assetId])).rows[0].ok)content.marks[kind]=null;
      if(content.letterheadAsset&&!(await c.query('SELECT can_apply_asset($1) AS ok',[content.letterheadAsset])).rows[0].ok){content.letterhead=`official-${source.language}`;delete content.letterheadAsset;}
      const allowed=await verifyAssets(c,content,user.id);
-     const copied=(await c.query('INSERT INTO documents(title,number,recipient,type,language,content,created_by) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *',[content.title,content.number,content.recipient,content.type,content.language,content,user.id])).rows[0];await linkAssets(c,copied.id,allowed);return wire(copied);
+     const copied=(await c.query('INSERT INTO documents(title,number,recipient,type,language,content,created_by,audience) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',[content.title,content.number,content.recipient,content.type,content.language,content,user.id,source.audience==='selected'?'selected':'all'])).rows[0];await linkAssets(c,copied.id,allowed);return sharedWire(c,copied);
     }
     if(parts.length===1&&method==='POST'){
      const d=validateDocument(payload);const assets=await verifyAssets(c,d,user.id);
      const key=payload.importKey?text(payload.importKey,200):null;
-     if(key){const prior=await c.query('SELECT * FROM documents WHERE import_owner=$1 AND import_key=$2',[user.id,key]);if(prior.rowCount)return wire(prior.rows[0]);}
-     const {rows:[row]}=await c.query('INSERT INTO documents(title,number,recipient,type,language,content,created_by,import_owner,import_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',[d.title,d.number,d.recipient,d.type,d.language,d,user.id,key?user.id:null,key]);await linkAssets(c,row.id,assets);return wire(row);
+     if(key){const prior=await c.query('SELECT * FROM documents WHERE import_owner=$1 AND import_key=$2',[user.id,key]);if(prior.rowCount)return sharedWire(c,prior.rows[0]);}
+     const mode=audienceOf(payload.audience);
+      const {rows:[row]}=await c.query('INSERT INTO documents(title,number,recipient,type,language,content,created_by,import_owner,import_key,audience) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *',[d.title,d.number,d.recipient,d.type,d.language,d,user.id,key?user.id:null,key,mode]);
+      await share(c,row.id,mode,payload.visibleTo||[],user.id);await linkAssets(c,row.id,assets);return sharedWire(c,row);
     }
     if(parts.length===2&&['PATCH','DELETE'].includes(method)){
      const {rows:[old]}=await c.query('SELECT * FROM documents WHERE id=$1 FOR UPDATE',[id]);if(!old)fail(404,'Document unavailable');if(payload.version!==old.version)fail(409,'Document changed; reload before saving');
      if(method==='DELETE'){const {rows:[deleted]}=await c.query('SELECT delete_document($1,$2) AS ok',[id,payload.version]);if(!deleted.ok)fail(409,'Document version conflict');return {ok:true};}
      const d=validateDocument(payload),status=payload.status||old.status;if(!['draft','finalized','archived'].includes(status))fail(400,'Invalid status');
      const assets=await verifyAssets(c,d,user.id,id);
-     const {rows:[row]}=await c.query('UPDATE documents SET title=$1,number=$2,recipient=$3,type=$4,language=$5,status=$6,content=$7,version=version+1,updated_at=now() WHERE id=$8 RETURNING *',[d.title,d.number,d.recipient,d.type,d.language,status,d,id]);await linkAssets(c,id,assets);return wire(row);
+      const mode=audienceOf(payload.audience,old.audience);
+      const recipients=payload.visibleTo===undefined?(await c.query('SELECT account_id FROM document_recipients WHERE document_id=$1',[id])).rows.map(r=>r.account_id):payload.visibleTo;
+     const {rows:[row]}=await c.query('UPDATE documents SET title=$1,number=$2,recipient=$3,type=$4,language=$5,status=$6,content=$7,audience=$9,version=version+1,updated_at=now() WHERE id=$8 RETURNING *',[d.title,d.number,d.recipient,d.type,d.language,status,d,id,mode]);await share(c,id,mode,recipients,user.id);await linkAssets(c,id,assets);return sharedWire(c,row);
     }
    }
    fail(404,'Route unavailable');
