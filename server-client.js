@@ -97,7 +97,7 @@ const ServerClient=(()=>{
   if(!staff()||busy)return;captureEditor();if(!working.title.trim()){MobileUX.setView('edit');toast(t('required'));document.getElementById('docTitle').focus();return;}
   setBusy(true);
   const source=working,snapshot=structuredClone(working),signature=draftSignature(snapshot),existingId=docId,actor=user.id;
-  const unchanged=()=>working===source&&draftSignature(working)===signature;let acknowledged=null;
+  const unchanged=()=>working===source&&draftSignature(working)===signature;let acknowledged=null;let failed=false;
   try{
    const payload=await prepare(snapshot);if(working!==source)return;
    let saved=await api('documents'+(existingId?'/'+existingId:''),existingId?'PATCH':'POST',{...payload,status:existingId?(status||'draft'):'draft'});
@@ -114,7 +114,19 @@ const ServerClient=(()=>{
    docId=saved.id;const visible=working;
    await refresh();if(working!==visible||page!=='editor')return;
    renderEditorPreservingFocus();setBusy(true);toast(dirty?tr('newerEdits'):t('saved'));
-  }catch(e){if(working===source&&acknowledged){retainSavedIdentity(source,snapshot,acknowledged);docId=acknowledged.id;dirty=true;}else if(acknowledged&&recovery?.accountId===actor&&recovery.source===source){retainSavedIdentity(recovery.draft,snapshot,acknowledged);}error(e);}finally{setBusy(false);}
+  }catch(e){
+   failed=true;
+   if(working===source&&acknowledged){retainSavedIdentity(source,snapshot,acknowledged);docId=acknowledged.id;dirty=true;}
+   else if(acknowledged&&recovery?.accountId===actor&&recovery.source===source){retainSavedIdentity(recovery.draft,snapshot,acknowledged);}
+   else if(working===source)dirty=true;
+   error(e);
+  }finally{
+   setBusy(false);
+   if(failed&&page==='editor'){
+    const el=document.getElementById('saveState');
+    if(el){el.dataset.sync='failed';el.textContent=lang==='fa'?'ذخیره در پایگاه داده ناموفق بود':'Not saved to company database';}
+   }
+  }
  }
  async function duplicate(){if(!staff())return;if(!docId||dirty){toast(lang==='fa'?'پیش از ایجاد نسخه مشابه، پیش‌نویس را ذخیره کنید.':'Save the draft before making a copy.');return;}try{const d=await api(`documents/${docId}/duplicate`,'POST',{});dirty=false;await refresh();await open(d.id);toast(tr('duplicate'));}catch(e){error(e);}}
  async function print(operation){
