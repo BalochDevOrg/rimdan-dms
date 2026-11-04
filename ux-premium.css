@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Estedad:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Source+Serif+4:wght@400;600;700&display=swap');
 /* Rimdan premium workspace – additive, scope-aware presentation layer.
    Never changes the physical A4 print geometry or role authorizations. */
 :root{--gold:#cba15c;--gold-light:#f7ebd4;--navy:#0c233c;--navy2:#163651;--bg:#f5f6f8;--ink:#142a42;--muted:#67788c;--line:#e1e6ec;--shadow:0 12px 36px rgba(17,39,64,.07);--radius:16px}
