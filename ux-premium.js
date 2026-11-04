@@ -102,7 +102,8 @@
  }
  let queued=false;
  const observer=new MutationObserver(()=>{if(queued)return;queued=true;queueMicrotask(()=>{queued=false;decorate();});});
- observer.observe($('#app')||document.body,{childList:true,subtree:true});
+ // Observe only the rendered page, never the sidebar elements decorate() updates.
+ observer.observe($('#view')||document.body,{childList:true,subtree:true});
  const notification=$('#toast');
  if(notification){
   const toastObserver=new MutationObserver(()=>{
