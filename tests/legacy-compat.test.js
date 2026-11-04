@@ -4,7 +4,8 @@ import http from 'node:http';
 import pg from 'pg';
 import {randomBytes} from 'node:crypto';
 import {readFile,readdir} from 'node:fs/promises';
-import {bootstrap} from '../scripts/bootstrap-admin.js';
+import {hashPassword} from '../server/auth.js';
+import {createHash} from 'node:crypto';
 import {closeDatabase} from '../server/db.js';
 import handler from '../server/api.js';
 
@@ -32,12 +33,17 @@ before(async()=>{
  owner=new pg.Client({connectionString:adminURL.href});await owner.connect();
  await owner.query('BEGIN');
  await owner.query('SET LOCAL search_path=public,pg_catalog,pg_temp');
+ await owner.query('CREATE TABLE IF NOT EXISTS public.schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');
  const files=(await readdir(new URL('../migrations/',import.meta.url))).filter(n=>/^00[1-8]_.*\.sql$/.test(n)).sort();
  assert.equal(files.length,8);
- for(const file of files)await owner.query(await readFile(new URL('../migrations/'+file,import.meta.url),'utf8'));
+ for(const file of files){
+  const sql=await readFile(new URL('../migrations/'+file,import.meta.url),'utf8');
+  await owner.query(sql);
+  await owner.query('INSERT INTO public.schema_migrations(version,checksum) VALUES($1,$2)',[file,createHash('sha256').update(sql).digest('hex')]);
+ }
  await owner.query('COMMIT');
  await root.query('GRANT rimdan_runtime TO rimdan_test_legacy_app');
- await bootstrap(adminURL.href,'legacy-admin@test.invalid',pass);
+ await owner.query("INSERT INTO accounts(email,password_hash,role,active) VALUES($1,$2,'administrator',true)",['legacy-admin@test.invalid',await hashPassword(pass)]);
  process.env.DATABASE_URL=appURL.href;process.env.APP_ENV='development';
  server=http.createServer(handler);await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  origin='http://127.0.0.1:'+server.address().port;process.env.APP_ORIGIN=origin;
