@@ -26,7 +26,7 @@
  const root=document.documentElement,nav=$('#sidebar'),collapse=$('#collapseNav');
  function updateCollapse(){
   const on=root.dataset.navCollapsed==='true';
-  if(collapse){collapse.setAttribute('aria-expanded',String(!on));collapse.title=tr(on?'expand':'collapse');collapse.setAttribute('aria-label',collapse.title);collapse.textContent=on?'⇥':'⇤';}
+  if(collapse){collapse.setAttribute('aria-expanded',String(!on));collapse.title=tr(on?'expand':'collapse');collapse.setAttribute('aria-label',collapse.title);const glyph=on?'⇥':'⇤';if(collapse.textContent!==glyph)collapse.textContent=glyph;}
  }
  try{root.dataset.navCollapsed=localStorage.getItem('rimdan_nav_collapsed')==='true'?'true':'false';}catch{root.dataset.navCollapsed='false';}
  collapse?.addEventListener('click',()=>{
