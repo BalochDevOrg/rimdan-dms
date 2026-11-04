@@ -1,5 +1,5 @@
 import {transaction,databaseOptions} from './db.js';
-import {logFailure,requestId} from './errors.js';
+import {logFailure,requestId,fault} from './errors.js';
 import {token,digest,hashPassword,verifyPassword,passwordValid,configuration,cookie,readCookie,constantEqual} from './auth.js';
 import {fail,uuid,text,validateDocument,verifyAssets,linkAssets,normalizeAsset,wire} from './documents.js';
 const accountColumns='id,email,role,active,created_at,has_password';
@@ -20,7 +20,7 @@ async function sharedWire(c,d){
  const visibleTo=audience==='selected'?(await c.query('SELECT account_id FROM document_recipients WHERE document_id=$1 ORDER BY account_id',[d.id])).rows.map(r=>r.account_id):[];
  return {...wire(d),audience,visibleTo};
 }
-function phase3Required(){fail(503,'Document sharing and account recovery require Phase 3 database migration');}
+function phase3Required(){throw fault(503,'feature_unavailable','Document sharing and account recovery require Phase 3 database migration');}
 
 const staff=user=>{if(!['administrator','manager'].includes(user.role))fail(403,'Read-only account');};
 const admin=user=>{if(user.role!=='administrator')fail(403,'Administrator required');};
