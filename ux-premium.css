@@ -1,0 +1,92 @@
+/* Rimdan premium workspace – additive, scope-aware presentation layer.
+   Never changes the physical A4 print geometry or role authorizations. */
+:root{--gold:#cba15c;--gold-light:#f7ebd4;--navy:#0c233c;--navy2:#163651;--bg:#f5f6f8;--ink:#142a42;--muted:#67788c;--line:#e1e6ec;--shadow:0 12px 36px rgba(17,39,64,.07);--radius:16px}
+body{font-size:14px;line-height:1.55}
+.sidebar{width:265px;background:linear-gradient(170deg,#0c233c,#122f4b);padding:25px 16px 18px;transition:width .22s ease;z-index:10}
+.sidebar .brand{padding-block:12px 24px;gap:12px}
+.sidebar .nav{min-height:49px;font-weight:600;letter-spacing:.01em;border:1px solid transparent;transition:background .18s ease,color .18s ease,transform .18s ease}
+.sidebar .nav:hover{background:#2c4560;transform:translateX(2px);color:#fff}
+.sidebar .nav.active{background:linear-gradient(100deg,#324a62,#213a54);color:#fff;border-color:#b9915745;box-shadow:inset 3px 0 #d9b574}
+.sidebar .nav.active .nav-icon{color:#f2ce8a}
+.sidebar .nav-icon{display:inline-flex;width:24px;min-width:24px;align-items:center;justify-content:center;color:#cdb17e;font-size:21px}
+.sidebar .nav-text{min-width:0}
+.collapse-nav{border:1px solid #63758a55;background:#233c54;color:#e6c18a;width:36px;height:36px;border-radius:10px;margin:0 4px 10px;align-self:flex-end;display:grid;place-items:center}
+.collapse-nav:hover{background:#355371}
+html[data-nav-collapsed=true] .sidebar{width:79px;padding-inline:13px}
+html[data-nav-collapsed=true] .sidebar .brand>div:last-child,
+html[data-nav-collapsed=true] .sidebar .nav-text,
+html[data-nav-collapsed=true] .sidebar .nav-label,
+html[data-nav-collapsed=true] .sidebar-bottom .demo-pill,
+html[data-nav-collapsed=true] .sidebar-bottom .user>div{display:none}
+html[data-nav-collapsed=true] .sidebar .brand{padding-inline:0;justify-content:center}
+html[data-nav-collapsed=true] .sidebar .brand-logo{width:48px;height:48px}
+html[data-nav-collapsed=true] .sidebar .nav{justify-content:center;padding-inline:5px}
+html[data-nav-collapsed=true] .sidebar .nav.active{border-inline-start-width:2px}
+html[data-nav-collapsed=true] .sidebar .user{justify-content:center}
+html[data-nav-collapsed=true] .collapse-nav{align-self:center;margin-inline:auto}
+html[data-nav-collapsed=true] .sidebar .nav-icon{font-size:24px}
+.topbar{box-shadow:0 2px 12px #102b4108}
+main{max-width:none}
+.heading{align-items:center}
+.heading h1{letter-spacing:-.025em}
+.panel,.stat,.template-card{border-radius:var(--radius);border:1px solid #e4e8ee;box-shadow:var(--shadow)}
+.stat{transition:transform .2s ease,box-shadow .2s ease}
+.stat:hover{transform:translateY(-2px);box-shadow:0 15px 32px #0f2b4715}
+.stat-icon,.quick-icon{color:#9a7335;background:#fbf2e1;border-radius:12px}
+button.primary,.primary{background:#132f4c;color:white;border-color:#132f4c;box-shadow:0 5px 12px #112b4415}
+button.primary:hover:not(:disabled),.primary:hover:not(:disabled){background:#214563;border-color:#bf985d;box-shadow:0 6px 16px #152e4520}
+button.secondary,.secondary,.outline-btn{border-color:#cdd8e2;border-radius:10px}
+button.secondary:hover:not(:disabled),.secondary:hover:not(:disabled),.outline-btn:hover{border-color:#c6a16c;background:#fffaf0;color:#644614}
+button{transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease}
+button:focus-visible{outline:3px solid #d7a44980;outline-offset:2px}
+input,select,textarea{border-radius:10px}
+.toolbar{gap:12px;align-items:stretch}
+.toolbar .search{min-width:min(100%,310px);flex:2 1 290px}
+.toolbar button{min-height:42px}
+.rimdan-search-actions{display:flex;gap:8px;align-items:stretch}
+.rimdan-search-actions button{border:1px solid #ced8e2;background:#fff;border-radius:10px;min-width:44px;padding:0 12px}
+.rimdan-search-actions button:hover{border-color:#c9a167;color:#8d642f;background:#fff9ed}
+.document-table tr{transition:background-color .15s ease}
+.document-table tbody tr:hover{background:#fbf7ef}
+.document-table .link{color:#775320;font-weight:700}
+.editor-grid{grid-template-columns:minmax(390px, min(36vw,530px)) minmax(0,1fr);gap:22px}
+.editor-fields{padding:28px;max-height:none;border-top:3px solid #cba15c}
+.editor-fields .form-field{margin-block:12px}
+.editor-fields .format-details[open] summary,.editor-fields .document-setup[open] summary{color:#8d672b}
+.editor-fields summary{cursor:pointer;padding-block:10px}
+.editor-fields .format-details summary,.editor-fields .document-setup summary{font-weight:700}
+.editor-fields .format-button{border-radius:10px;min-width:44px}
+.editor-fields .format-button[aria-pressed=true]{background:#f8edda;color:#7e5527;border-color:#b98c4e}
+.editor-fields .editor-box{min-height:390px;line-height:1.9;padding:16px}
+.editor-fields .field-pair{gap:16px}
+.format-toolbar{gap:8px}
+.preview-panel{border:1px solid #dce4eb;background:#e9edf1;border-radius:16px;padding:24px}
+.preview-caption{padding:8px 4px;border-bottom:1px solid #cbd5df}
+#saveState[data-sync=stored]{color:#157348;background:#e7f7ef}
+#saveState[data-sync=unsaved]{color:#926422;background:#fff4da}
+#saveState[data-sync=saving]{color:#315b85;background:#eaf1f9}
+#saveState[data-sync=failed]{color:#9e3838;background:#ffeded}
+.rimdan-busy{position:relative;pointer-events:none;opacity:.75}
+.rimdan-busy::after{content:'';width:14px;height:14px;border:2px solid currentColor;border-inline-start-color:transparent;border-radius:50%;display:inline-block;margin-inline-start:10px;vertical-align:middle;animation:rimdan-spin .7s linear infinite}
+@keyframes rimdan-spin{to{transform:rotate(360deg)}}
+.rimdan-page-progress{position:fixed;top:0;left:0;right:0;height:3px;z-index:100;background:linear-gradient(90deg,#d7b472 0%,#fff5c5 50%,#a77c40 100%);background-size:200% auto;animation:rimdan-progress 1.25s linear infinite}
+@keyframes rimdan-progress{to{background-position:-200% 0}}
+.rimdan-toast-stack{position:fixed;left:50%;top:20px;transform:translateX(-50%);z-index:120;pointer-events:none;max-width:min(480px,calc(100vw - 30px))}
+.rimdan-toast-stack .rimdan-toast{padding:12px 18px;background:#102840;color:#fff;border:1px solid #d5ac69;border-radius:14px;box-shadow:0 15px 30px #142c4730;display:flex;gap:10px;align-items:center;pointer-events:auto}
+.rimdan-toast button{border:0;background:transparent;color:#e8c98e;font-size:20px}
+.auth-panel{max-width:490px!important;margin:clamp(34px,8vh,90px) auto!important;padding:clamp(24px,4vw,46px)!important;position:relative;overflow:hidden;border-top:4px solid var(--gold)}
+.auth-panel::before{content:'';display:block;width:58px;height:58px;margin-bottom:16px;border-radius:14px;background:#132e49 url('assets/logo.png') center/contain no-repeat}
+.auth-panel h1{font-size:30px;letter-spacing:-.02em;margin-bottom:6px}
+.auth-panel label{font-size:13px;margin-top:20px}
+.auth-panel input{min-height:50px;border-color:#d8e1e9}
+.auth-panel .primary{min-height:48px}
+.auth-panel #cloudError:empty{display:none}
+.auth-panel #cloudError{background:#fff7f1;border-radius:10px;padding:12px;border-inline-start:3px solid #c69262;line-height:1.8;overflow-wrap:anywhere}
+html[lang=fa] .auth-panel{direction:rtl}
+.cloud-panel{border-top:3px solid #d1ab70}
+#view .cloud-accounts>div{border-radius:10px}
+@media(min-width:1500px){.editor-grid{grid-template-columns:minmax(450px, 34vw) minmax(0,1fr)}}
+@media(max-width:1100px){.editor-grid{grid-template-columns:1fr}.editor-fields{max-width:none}}
+@media(max-width:760px){.collapse-nav{display:none!important}.sidebar{width:254px!important}.sidebar .nav-text{display:inline!important}.editor-fields{padding:16px}.editor-fields .field-pair{gap:10px}.rimdan-toast-stack{top:12px} .auth-panel{margin:30px 10px!important}}
+@media print{.collapse-nav,.rimdan-toast-stack,.rimdan-page-progress{display:none!important}.editor-grid{display:block!important}.preview-panel{border:0!important;padding:0!important;background:white!important}.editor-fields{display:none!important}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
