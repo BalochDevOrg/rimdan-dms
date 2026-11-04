@@ -38,6 +38,8 @@ jobs:
         run: npm test
       - name: Build static application
         run: npm run build
+      - name: Validate built Phase 3 assets
+        run: node scripts/check-built-assets.js
       - name: Dependency audit
         run: npm audit --omit=dev --audit-level=high
       - name: Verify baseline SQL was not rewritten
