@@ -176,3 +176,39 @@ test('Administrator-only readiness and runtime credential CLI use no owner privi
  const result=spawnSync(process.execPath,['scripts/check-runtime.js'],{encoding:'utf8',env:{...process.env,DATABASE_URL:appURL.href},timeout:20000});
  assert.equal(result.status,0,result.stderr);assert.deepEqual(JSON.parse(result.stdout),{ready:true});
 });
+
+
+test('Phase 3 selected audiences are enforced for staff and finalized employees',async()=>{
+ const targets=await request('share-targets','GET',null,manager);
+ assert.equal(targets.status,200);
+ const recipient=targets.data.find(x=>x.email==='employee@test.invalid');
+ assert.ok(recipient?.id);
+ const created=await request('documents','POST',{...content(),title:'Restricted fictional test',audience:'selected',visibleTo:[recipient.id]},manager);
+ assert.equal(created.status,200);
+ const id=created.data.id;
+ assert.equal((await request('documents/'+id,'GET',null,other)).status,404);
+ assert.equal((await request('documents/'+id,'GET',null,employee)).status,404);
+ const finished=await request('documents/'+id,'PATCH',{...content(),title:'Restricted fictional test',audience:'selected',visibleTo:[recipient.id],status:'finalized',version:created.data.version},manager);
+ assert.equal(finished.status,200);
+ assert.equal((await request('documents/'+id,'GET',null,employee)).status,200);
+ assert.equal((await request('documents/'+id,'GET',null,other)).status,404);
+ assert.equal((await request('documents/'+id,'GET',null,admin)).status,200);
+ assert.equal((await request('documents/'+id,'PATCH',{...content(),version:finished.data.version},other)).status,404);
+ assert.equal((await request('documents/'+id,'POST',{version:finished.data.version},other)).status,404);
+ const unshared=await request('documents/'+id,'PATCH',{...content(),title:'Restricted fictional test',audience:'selected',visibleTo:[],status:'finalized',version:finished.data.version},manager);
+ assert.equal(unshared.status,200);
+ assert.equal((await request('documents/'+id,'GET',null,employee)).status,404);
+});
+test('Phase 3 manual one-time password reset revokes sessions and rejects replay',async()=>{
+ const target=(await owner.query("SELECT id FROM accounts WHERE email='employee@test.invalid'")).rows[0];
+ const issued=await request('users/'+target.id+'/recovery','POST',{},admin);
+ assert.equal(issued.status,200);
+ assert.equal(issued.data.delivery,'manual');
+ const token=new URL(issued.data.recoveryURL).hash.slice('#reset='.length);
+ const updated='Fictional-Recovered-Password-2026';
+ assert.equal((await request('password-reset/accept','POST',{token,password:updated})).status,200);
+ assert.equal((await request('session','GET',null,employee)).status,401);
+ assert.notEqual((await request('password-reset/accept','POST',{token,password:updated})).status,200);
+ assert.equal((await request('login','POST',{email:'employee@test.invalid',password})).status,401);
+ assert.equal((await request('login','POST',{email:'employee@test.invalid',password:updated})).status,200);
+});
