@@ -44,7 +44,7 @@
     if(!icons[page])return;
     let icon=$('.nav-icon',btn);
     if(!icon){icon=document.createElement('span');icon.className='nav-icon';btn.prepend(icon);}
-    icon.innerHTML=svg(page);
+    const artwork=svg(page);if(icon.innerHTML!==artwork)icon.innerHTML=artwork;
     const label=$('.nav-text',btn)||btn.querySelector('span:not(.nav-icon)');
     if(label){label.classList.add('nav-text');btn.title=label.textContent.trim();btn.setAttribute('aria-label',label.textContent.trim());}
     else{btn.title=tr(page);btn.setAttribute('aria-label',tr(page));}
