@@ -70,7 +70,15 @@ const ServerClient=(()=>{
   delete value.customLetterhead;return value;
  }
  // The editable snapshot is independent of server-owned identity/revision fields.
- function setBusy(value){busy=value;for(const id of ['saveBtn','printBtn','pdfBtn']){const button=document.getElementById(id);if(button)button.disabled=value;}}
+ function setBusy(value){
+  busy=value;
+  for(const id of ['saveBtn','printBtn','pdfBtn']){
+   const button=document.getElementById(id);
+   if(button){button.disabled=value;button.classList.toggle('rimdan-busy',value);button.setAttribute('aria-busy',String(value));}
+  }
+  const indicator=document.getElementById('saveState');
+  if(indicator){indicator.dataset.sync=value?'saving':dirty?'unsaved':'stored';indicator.textContent=value?(lang==='fa'?'در حال پردازش…':'Processing…'):dirty?t('unsaved'):t('savedState');}
+ }
  function draftSignature(value){const {id,version,updated,createdBy,importKey,status,...draft}=value;return JSON.stringify(draft);}
  function retainSavedIdentity(current,snapshot,saved){
   for(const key of ['id','version','updated','createdBy','importKey','status'])current[key]=saved[key];
@@ -140,6 +148,7 @@ const ServerClient=(()=>{
  }
  function search(append=false){
   clearTimeout(searchTimer);const generation=++searchVersion;
+  if(!append){const list=document.getElementById('docList');if(list)list.innerHTML='<div class="rimdan-search-loading" role="status"><span class="rimdan-skeleton"></span><span class="rimdan-skeleton"></span><span class="rimdan-skeleton"></span></div>';}
   searchTimer=setTimeout(async()=>{try{
    const offset=append?nextOffset||0:0;
    const rows=await api('documents?q='+encodeURIComponent(windowSearch())+'&status='+encodeURIComponent(statusFilter)+'&type='+encodeURIComponent(typeFilter)+'&offset='+offset);
