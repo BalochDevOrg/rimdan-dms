@@ -1,14 +1,23 @@
-import {transaction} from './db.js';
+import {transaction,databaseOptions} from './db.js';
+import {logFailure,requestId} from './errors.js';
 import {token,digest,hashPassword,verifyPassword,passwordValid,configuration,cookie,readCookie,constantEqual} from './auth.js';
 import {fail,uuid,text,validateDocument,verifyAssets,linkAssets,normalizeAsset,wire} from './documents.js';
 const accountColumns='id,email,role,active,created_at,has_password';
 const staff=user=>{if(!['administrator','manager'].includes(user.role))fail(403,'Read-only account');};
 const admin=user=>{if(user.role!=='administrator')fail(403,'Administrator required');};
 async function body(req){
- if(!String(req.headers['content-type']||'').startsWith('application/json'))fail(415,'JSON required');
- if(req.body!==undefined){const raw=typeof req.body==='string'?req.body:JSON.stringify(req.body);if(Buffer.byteLength(raw)>4*1024*1024)fail(413,'Request too large');try{return typeof req.body==='string'?JSON.parse(req.body):req.body;}catch{fail(400,'Invalid JSON');}}
- let length=0,parts=[];for await(const chunk of req){length+=chunk.length;if(length>4*1024*1024)fail(413,'Request too large');parts.push(chunk);}
- try{return JSON.parse(Buffer.concat(parts).toString()||'{}');}catch{fail(400,'Invalid JSON');}
+ if(!/^application\/json(?:\s*;|$)/i.test(String(req.headers['content-type']||'')))fail(415,'JSON required');
+ let raw;
+ if(req.body!==undefined)raw=typeof req.body==='string'?req.body:JSON.stringify(req.body);
+ else{
+  let length=0,parts=[];for await(const chunk of req){length+=chunk.length;if(length>4*1024*1024)fail(413,'Request too large');parts.push(chunk);}
+  raw=Buffer.concat(parts).toString()||'{}';
+ }
+ if(typeof raw!=='string')fail(400,'JSON object required');
+ if(Buffer.byteLength(raw)>4*1024*1024)fail(413,'Request too large');
+ let value;try{value=JSON.parse(raw);}catch{fail(400,'Invalid JSON');}
+ if(!value||typeof value!=='object'||Array.isArray(value))fail(400,'JSON object required');
+ return value;
 }
 function send(res,status,value){res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.end(JSON.stringify(value));}
 async function limit(c,req,key,max){
@@ -18,22 +27,27 @@ async function limit(c,req,key,max){
  }
 }
 export default async function handler(req,res){
+ const id=requestId();let stage='configuration',route='unknown';
+ res.setHeader('X-Request-ID',id);
  res.setHeader('Cache-Control','no-store, private');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Vary','Cookie');
  try{
-  const config=configuration();const url=new URL(req.url,config.origin);
+  const url=new URL(req.url,'https://request.invalid');
   const path=String(req.query?.path||url.searchParams.get('path')||url.pathname.replace(/^\/api\/v1\/?/,''));
   const parts=path.split('/').filter(Boolean),method=req.method;
-  if(path==='config'&&method==='GET'){if(!process.env.DATABASE_URL)fail(503,'Database configuration required');return send(res,200,{mode:'server'});}
+  route=['config','login','session','logout','ready','documents','assets','templates','users','invitations','audit','summary'].includes(parts[0])?parts[0]:'unknown';
+  const config=configuration();
+  if(path==='config'&&method==='GET'){databaseOptions();return send(res,200,{mode:'server'});}
+  stage='request_validation';
   const mutation=!['GET','HEAD'].includes(method);
   if(mutation&&req.headers.origin!==config.origin)fail(403,'Origin rejected');
   const payload=mutation?await body(req):{};
   if(path==='login'&&method==='POST'){
    const email=text(payload.email,254).toLowerCase();if(typeof payload.password!=='string'||payload.password.length>128)fail(400,'Invalid credentials');
    // Rate-limit writes must commit even for failed password attempts.
-   await transaction(c=>limit(c,req,'login:'+email,20));
-   const account=await transaction(async c=>(await c.query('SELECT * FROM auth_lookup($1)',[email])).rows[0]);
-   if(!await verifyPassword(payload.password,account?.password_hash)||!account?.active)fail(401,'Invalid email or password');
-   const value=token(),csrf=token();await transaction(c=>c.query('SELECT session_create($1,$2,$3)',[account.id,digest(value),csrf]));
+   stage='login_rate_limit';await transaction(c=>limit(c,req,'login:'+email,20));
+   stage='login_lookup';const account=await transaction(async c=>(await c.query('SELECT * FROM auth_lookup($1)',[email])).rows[0]);
+   stage='password_verify';if(!await verifyPassword(payload.password,account?.password_hash)||!account?.active)fail(401,'Invalid email or password');
+   stage='session_create';const value=token(),csrf=token();await transaction(c=>c.query('SELECT session_create($1,$2,$3)',[account.id,digest(value),csrf]));
    res.setHeader('Set-Cookie',cookie(value));return send(res,200,{ok:true});
   }
   if(path==='invitations/accept'&&method==='POST'){
@@ -43,13 +57,15 @@ export default async function handler(req,res){
    const {rows:[row]}=await transaction(c=>c.query('SELECT accept_invitation($1,$2) AS id',[digest(payload.token),hash]));
    if(!row.id)fail(400,'Invitation invalid, expired or already used');return send(res,200,{ok:true});
   }
-  const sessionToken=readCookie(req);
+  stage='session_lookup';const sessionToken=readCookie(req);
   const user=await transaction(async c=>(await c.query('SELECT * FROM session_lookup($1)',[digest(sessionToken)])).rows[0]);
   if(!user)fail(401,'Authentication required');
   if(mutation&&!constantEqual(req.headers['x-csrf-token'],user.csrf))fail(403,'CSRF token rejected');
   if(path==='session'&&method==='GET')return send(res,200,{user:{id:user.id,email:user.email,role:user.role},csrf:user.csrf});
   if(path==='logout'&&method==='POST'){await transaction(c=>c.query('SELECT session_remove($1)',[digest(sessionToken)]));res.setHeader('Set-Cookie',cookie('',true));return send(res,200,{ok:true});}
+  stage='resource';
   const result=await transaction(async c=>{
+   if(path==='ready'&&method==='GET'){admin(user);await c.query('SELECT 1');return {ready:true};}
    if(path==='summary'&&method==='GET')return (await c.query("SELECT count(*)::int AS total,count(*) FILTER(WHERE status='draft')::int AS draft,count(*) FILTER(WHERE status='finalized')::int AS finalized,count(*) FILTER(WHERE status='archived')::int AS archived FROM documents")).rows[0];
    if(parts[0]==='users'){
     admin(user);
@@ -122,7 +138,8 @@ export default async function handler(req,res){
     if(parts.length===2&&method==='GET'){const {rows:[d]}=await c.query('SELECT * FROM documents WHERE id=$1',[id]);if(!d)fail(404,'Document unavailable');return wire(d);}
     staff(user);
     if(parts.length===3&&['print','export'].includes(parts[2])&&method==='POST'){
-     const {rows:[d]}=await c.query('SELECT * FROM documents WHERE id=$1',[id]);if(!d)fail(404,'Document unavailable');
+     const {rows:[d]}=await c.query('SELECT * FROM documents WHERE id=$1 FOR SHARE',[id]);if(!d)fail(404,'Document unavailable');
+     if(!Number.isSafeInteger(payload.version)||payload.version!==d.version)fail(409,'Document changed; reopen before printing or exporting');
      // Audit insertion is a narrow definer function, never a general table grant.
      await c.query('SELECT audit_output($1,$2)',[id,parts[2]]);return wire(d);
     }
@@ -153,9 +170,7 @@ export default async function handler(req,res){
   if(result?.binary){res.setHeader('Content-Type','image/png');res.setHeader('Content-Disposition','inline');res.end(result.binary);return;}
   send(res,200,result);
  }catch(e){
-  const known=e.status||({'23505':409,'23514':409,'23503':409,'42501':403,'22P02':400}[e.code]);
-  const status=known||500;
-  if(!known)console.error('Rimdan API failure',e.code||e.name);
-  send(res,status,{error:known?(e.status?e.message:status===409?'Constraint or reference conflict':'Access denied'):'Server operation failed'});
+  const detail=logFailure(e,{id,route,stage,method:['GET','POST','PATCH','DELETE','HEAD','PUT','OPTIONS'].includes(req.method)?req.method:'OTHER'});
+  send(res,detail.status,{error:detail.message,category:detail.category,requestId:id});
  }
 }

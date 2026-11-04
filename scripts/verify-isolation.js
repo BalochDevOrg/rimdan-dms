@@ -1,5 +1,6 @@
 import {fileURLToPath} from 'node:url';
 import {database} from '../server/db.js';
+import {logFailure} from '../server/errors.js';
 import {ownerURL} from './owner-connection.js';
 export const tables=['accounts','sessions','invitations','auth_buckets','documents','assets','asset_grants','document_assets','templates','audit_records','schema_migrations'];
 export const functions=['enforce_administrator()','actor_id()','actor_role()','staff()','admin()','protect_account()','record_changes()','auth_lookup(text)','session_lookup(text)','session_create(uuid,text,text)','session_remove(text)','consume_limit(text,integer)','accept_invitation(text,text)','audit_output(uuid,text)','can_apply_asset(uuid)','delete_document(uuid,integer)','revoke_deactivated_sessions()'];
@@ -13,6 +14,13 @@ export async function verifyIsolation(c,{requireApiRoles=false}={}){
     OR EXISTS(SELECT 1 FROM pg_auth_members WHERE member=pg_roles.oid))`);
  if(unsafeRuntime.rowCount)throw Error('Unsafe rimdan_runtime role');
  const denied=[...roles,'rimdan_runtime'];
+ // Expand ACLs instead of naming MAINTAIN: also works on PostgreSQL 16,
+ // where that privilege does not exist. Preserve explicit runtime table grants.
+ const ledger=await c.query(`SELECT 1 FROM pg_class c
+  CROSS JOIN LATERAL aclexplode(coalesce(c.relacl,acldefault('r',c.relowner))) a
+  WHERE c.oid='public.schema_migrations'::regclass
+   AND CASE WHEN a.grantee=0 THEN true ELSE pg_has_role('rimdan_runtime',a.grantee,'USAGE') END`);
+ if(ledger.rowCount)throw Error('rimdan_runtime has migration ledger ACL privileges');
  for(const role of denied){
   if((await c.query("SELECT has_schema_privilege($1,'public','CREATE') AS allowed",[role])).rows[0].allowed)throw Error(role+' can create public objects');
   for(const table of role==='rimdan_runtime'?['schema_migrations']:tables){
@@ -22,9 +30,12 @@ export async function verifyIsolation(c,{requireApiRoles=false}={}){
   }
   if(role!=='rimdan_runtime'){
    for(const fn of functions)if((await c.query('SELECT has_function_privilege($1,$2,\'EXECUTE\') AS allowed',[role,'public.'+fn])).rows[0].allowed)throw Error(role+' can execute '+fn);
-   for(const {name} of (await c.query("SELECT pg_get_serial_sequence('public.audit_records','id') AS name")).rows){
-    if((await c.query("SELECT has_sequence_privilege($1,$2,'USAGE,SELECT,UPDATE') AS allowed",[role,name])).rows[0].allowed)throw Error(role+' has sequence access');
-   }
+  }
+  for(const {name} of (await c.query(`SELECT DISTINCT s.oid::regclass::text AS name FROM pg_class s
+   JOIN pg_depend d ON d.objid=s.oid AND d.classid='pg_class'::regclass
+   JOIN pg_class t ON t.oid=d.refobjid
+   WHERE s.relkind='S' AND t.oid=ANY($1::regclass[]) AND d.deptype IN ('a','i')`,[tables.map(t=>'public.'+t)])).rows){
+   if((await c.query("SELECT has_sequence_privilege($1,$2,'USAGE,SELECT,UPDATE') AS allowed",[role,name])).rows[0].allowed)throw Error(role+' has sequence access');
   }
  }
  const rls=await c.query('SELECT relname FROM pg_class WHERE oid=ANY($1::regclass[]) AND NOT relrowsecurity',[tables.map(t=>'public.'+t)]);
@@ -60,5 +71,5 @@ export async function verifyIsolation(c,{requireApiRoles=false}={}){
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)){
  let pool;try{pool=database(ownerURL());const result=await verifyIsolation(pool,{requireApiRoles:process.argv.includes('--require-api-roles')});console.log('Isolation verified:',JSON.stringify(result));}
- catch(e){console.error(e.message);process.exitCode=1;}finally{await pool?.end();}
+ catch(e){logFailure(e,{stage:'isolation_check'});process.exitCode=1;}finally{await pool?.end();}
 }

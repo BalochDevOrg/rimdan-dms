@@ -9,8 +9,10 @@
     "dev": "node --env-file-if-exists=.env --env-file-if-exists=.env.local server/dev.js",
     "migrate": "node scripts/migrate.js",
     "bootstrap-admin": "node scripts/bootstrap-admin.js",
-    "test": "node --test --test-concurrency=1 tests/backend.test.js tests/security.test.js",
+    "test": "node --test --test-concurrency=1 tests/backend.test.js tests/security.test.js tests/operator.test.js tests/runtime.test.js",
+    "test:unit": "node --test --test-concurrency=1 tests/operator.test.js tests/runtime.test.js",
     "test:security": "node --test --test-concurrency=1 tests/security.test.js",
+    "check:runtime": "node scripts/check-runtime.js",
     "verify:isolation": "node scripts/verify-isolation.js",
     "build": "node scripts/build-static.js"
   },

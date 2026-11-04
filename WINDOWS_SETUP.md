@@ -1,24 +1,26 @@
-# Windows PowerShell — local backend development
+# Windows PowerShell — Rimdan setup and Phase-one verification
 
-This branch includes backend commit `5851d98`, the bilingual editor and original Persian/English letterheads, mobile tabs/zoom, and signature/stamp tools. Use Node.js **24 LTS**, Git for Windows and PostgreSQL 16+ (or Docker Desktop in Linux-container mode). Run these commands from the repository root in PowerShell. `npm.cmd` avoids PowerShell's `npm.ps1` execution-policy restrictions without changing machine policy.
+> **Existing installation:** migrations 001–008 and the first Administrator are already present. Use the canonical **Phase-one workflow for the existing installation** below, then the separate Preview checklist. Fresh-database provisioning examples are not instructions to repeat those operations on the current Supabase project.
+
+The backend began at commit `5851d98`; the hardened baseline is `bf08a98`. Phase-one remediation is developed locally on `feature/remediation-phase-1`. It includes the bilingual editor and original Persian/English letterheads, mobile tabs/zoom, and signature/stamp tools. Use Node.js **24 LTS**, Git for Windows and PostgreSQL 16+ (or Docker Desktop in Linux-container mode). Run these commands from the repository root in PowerShell. `npm.cmd` avoids PowerShell's `npm.ps1` execution-policy restrictions without changing machine policy.
 
 **Security patch:** additive migration 008 and the updated runner protect Supabase API-role grants and migration metadata. The local sections below use only local PostgreSQL. The separate Supabase section provides commands for you to review and run manually; none were executed against a real project during implementation.
 
 ## Install and inspect
 
 ```powershell
-git clone --branch feature/multi-user-backend https://github.com/BalochDevOrg/rimdan-dms.git
+git clone --branch feature/supabase-security-hardening https://github.com/BalochDevOrg/rimdan-dms.git
 Set-Location rimdan-dms
 git status --short
 git log -5 --oneline
 git show --no-patch 5851d98
 node --version
 npm.cmd ci
-Copy-Item .env.example .env.local
+if (-not (Test-Path .env.local)) { Copy-Item .env.example .env.local }
 git check-ignore .env.local
 ```
 
-If the checkout already exists, use it rather than cloning over local work. Preserve uncommitted files before changing branches. Do not overwrite an existing `.env.local`. Edit placeholders using a local editor; never commit passwords. `.env`, `.env.local` and other `.env.*` files are ignored, with `.env.example` as the only intentional exception. No owner secret is needed by the running application.
+If the checkout already exists, use it rather than cloning over local work. Phase-one changes are not automatically published: the clone command above selects the hardened remote baseline, not unpublished local remediation. For this existing workspace, stay in `D:\BalochDev AI\rimdan-dms-feature-multi-user-backend` on `feature/remediation-phase-1`; use only its reviewed patch/release for the checks below. Preserve uncommitted files before changing branches. Do not overwrite an existing `.env.local`. Edit placeholders using a local editor; never commit passwords. `.env`, `.env.local` and other `.env.*` files are ignored, with `.env.example` as the only intentional exception. No owner secret is needed by the running application.
 
 ## Start an isolated local PostgreSQL instance
 
@@ -141,7 +143,7 @@ The historical backend preparation below was validated on Linux. The hardening p
 - `.env.local` is ignored; only `.env.example` is tracked. Secret-pattern checks of tracked text and reachable Git history found no obvious credentials. Official pads match `origin/main` byte-for-byte, and the backend retains the approved editor/mobile commits.
 - The historical validation above predates migration 008. Current Windows hardening results are recorded in SECURITY_HARDENING.md. No remote migration, production account, deployment or merge was performed.
 
-## Manual Supabase setup from Windows PowerShell (operator-run only)
+## New empty Supabase project only — manual operator setup
 
 Review SECURITY_HARDENING.md first. These commands are instructions for you; the implementation did not connect to your project. Use a dedicated Rimdan project, Node 24, Git and `psql` (PostgreSQL bin directory on PATH). Keep migrations/bootstrap out of installation, startup, build and Vercel. Do not run test suites against Supabase.
 
@@ -234,7 +236,8 @@ $appUser = Read-Host 'rimdan_app.PROJECT_REF'
 $env:DATABASE_URL = New-RimdanDatabaseUrl $appHost 6543 $appUser
 $env:APP_ORIGIN = 'http://127.0.0.1:3000'
 $env:APP_ENV = 'development'
-node --input-type=module -e "import {transaction,closeDatabase} from './server/db.js'; try { await transaction(async c => { const r=await c.query('SELECT ssl,version,cipher FROM pg_stat_ssl WHERE pid=pg_backend_pid()'); console.log(r.rows); }); } finally { await closeDatabase(); }"
+Remove-Item Env:MIGRATION_DATABASE_URL -ErrorAction SilentlyContinue
+node scripts/check-runtime.js
 if ($LASTEXITCODE -ne 0) { throw 'Runtime role/TLS check failed.' }
 npm.cmd run dev
 # Visit exactly http://127.0.0.1:3000 and sign in; Ctrl+C stops the server.
@@ -249,7 +252,7 @@ Remove-Item Env:DATABASE_URL, Env:DATABASE_SSL_CA, Env:MIGRATION_DATABASE_URL, E
 Remove-Item Function:New-RimdanDatabaseUrl -ErrorAction SilentlyContinue
 ```
 
-Recheck the Data API toggle and rerun `verify-isolation.js --approve-production --require-api-roles` with temporary owner credentials after future schema/provider changes. The SQL check reports eleven tables, seventeen functions and all three API roles; any denial failure stops the migration before commit. It verifies SQL isolation even when the HTTP API is disabled.
+Recheck the Data API toggle and rerun `verify-isolation.js --approve-production --require-api-roles` with temporary owner credentials after future schema/provider changes. The owner SQL check reports eleven tables, seventeen functions and all three API roles; it now checks runtime ledger MAINTAIN and all application-owned sequence privileges too; any denial failure stops the migration before commit. It verifies SQL isolation even when the HTTP API is disabled.
 
 
 ## Native Windows browser regressions
@@ -281,3 +284,62 @@ $env:RIMDAN_TEST_ARTIFACTS = "$PWD/.local/browser-results"
 ```
 
 Stop the temporary HTTP server with Ctrl+C. Then run `npm.cmd run build` without RIMDAN_MODE to restore the authenticated server-mode output. Serve only `public` with the temporary static server. For an existing Chromium installation set `RIMDAN_CHROMIUM` to its absolute executable path; no product code changes are needed.
+
+
+## Phase-one workflow for the existing installation
+
+Migrations 001–008 and the first Administrator already exist in the confirmed installation. Phase one changes no schema: **do not rerun bootstrap, create another Administrator, or rewrite migration checksums for this update**. Migration/bootstrap examples above are only for an explicitly chosen new empty database. Runtime verification uses `rimdan_app`; owner isolation verification uses temporary `MIGRATION_DATABASE_URL`. Runtime credentials must remain unable to read or maintain the ledger.
+
+From the existing PowerShell checkout, verify the reviewed local patch and run the fast tests:
+
+```powershell
+Set-Location 'D:\BalochDev AI\rimdan-dms-feature-multi-user-backend'
+git branch --show-current
+git status --short
+git merge-base --is-ancestor bf08a98 HEAD
+if ($LASTEXITCODE -ne 0) { throw 'Unexpected branch ancestry' }
+if (-not (Test-Path scripts/check-runtime.js)) { throw 'Phase-one remediation files are missing' }
+node --version
+npm.cmd run test:unit
+if ($LASTEXITCODE -ne 0) { throw 'Unit/configuration checks failed' }
+```
+
+For full PostgreSQL tests, use an entirely separate loopback-only test cluster. Set `TEST_DATABASE_URL` to that disposable cluster, not the development database or a tunnel. Enable TLS using a generated test certificate with `DNS:localhost` SAN only, and set `TEST_TLS_CA` to that certificate's absolute path. The handshake test must run, not skip, for release acceptance. Never use the provider's production credentials. The suites create/drop only randomized fixture databases and fictional accounts, but also create test roles, so the **cluster itself** must be disposable.
+
+```powershell
+$testUrlSecret = Read-Host 'Owner URL of disposable LOOPBACK TEST CLUSTER only' -AsSecureString
+try {
+  $env:TEST_DATABASE_URL = [Net.NetworkCredential]::new('', $testUrlSecret).Password
+} finally {
+  $testUrlSecret.Dispose()
+  Remove-Variable testUrlSecret -ErrorAction SilentlyContinue
+}
+$env:TEST_TLS_CA = (Resolve-Path (Read-Host 'Local test certificate path (SAN DNS:localhost only)')).Path
+npm.cmd test
+if ($LASTEXITCODE -ne 0) { throw 'Backend/security checks failed' }
+$env:RIMDAN_TEST_ARTIFACTS = "$PWD/.local/phase1-browser-results"
+& ./.local/browser-venv/Scripts/python.exe tests/remediation_browser.py
+if ($LASTEXITCODE -ne 0) { throw 'Remediation browser checks failed' }
+& ./.local/browser-venv/Scripts/python.exe tests/backend_browser.py
+if ($LASTEXITCODE -ne 0) { throw 'Backend browser checks failed' }
+```
+
+Run the four prototype browser suites using the isolated static workflow above, then build the normal authenticated output. Do not publish a prototype build:
+
+```powershell
+Remove-Item Env:RIMDAN_MODE -ErrorAction SilentlyContinue
+npm.cmd run build
+npm.cmd audit --omit=dev --audit-level=high
+git diff --check
+Remove-Item Env:TEST_DATABASE_URL, Env:TEST_TLS_CA -ErrorAction SilentlyContinue
+```
+
+For a local runtime check with existing runtime-only settings, explicitly load the ignored file yourself (Codex did not read it):
+
+```powershell
+node --env-file=.env.local scripts/check-runtime.js
+```
+
+The check prints only `{"ready":true}` on success and safe categories on failure. It validates APP_ORIGIN, verified database configuration, the restricted role and a SELECT 1 transaction. It neither reads migration metadata nor writes accounts. Hosted `/api/v1/config` validates configuration without opening a connection; `/api/v1/session` with no cookie must return 401 only after the database path succeeds. `/api/v1/ready` returns only readiness and requires a signed-in Administrator; managers/employees cannot use it. Request failures carry a correlation ID; server logs contain only category/code/stage/route/method, never raw exceptions, SQL, bodies or URLs.
+
+Deployment is a separate approved stage. Follow [VERCEL_PREVIEW_CHECKLIST.md](docs/VERCEL_PREVIEW_CHECKLIST.md). Local test success does not verify real Vercel environment scope, pooler routing or Linux function packaging. No deployment or environment change was made by Phase one.

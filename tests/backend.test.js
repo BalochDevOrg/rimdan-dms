@@ -4,6 +4,7 @@ import http from 'node:http';
 import {randomBytes} from 'node:crypto';
 import sharp from 'sharp';
 import pg from 'pg';
+import {spawnSync} from 'node:child_process';
 import {migrate} from '../scripts/migrate.js';
 import {bootstrap} from '../scripts/bootstrap-admin.js';
 import {transaction,closeDatabase} from '../server/db.js';
@@ -101,7 +102,10 @@ test('finalized-only employee reads, no employee export, optimistic concurrency,
  assert.equal((await request('documents/'+documentId,'GET',null,employee)).status,200);
  assert.equal((await request(`documents/${documentId}/assets/${assetId}`,'GET',null,employee)).status,200);
  assert.equal((await request('documents/'+documentId+'/export','POST',{},employee)).status,403);
- assert.equal((await request('documents/'+documentId+'/print','POST',{},manager)).status,200);
+ const beforeOutput=(await owner.query("SELECT count(*)::int n FROM audit_records WHERE action IN ('document_print','document_export')")).rows[0].n;
+ for(const operation of ['print','export'])assert.equal((await request('documents/'+documentId+'/'+operation,'POST',{version:finalized.data.version-1},manager)).status,409);
+ assert.equal((await owner.query("SELECT count(*)::int n FROM audit_records WHERE action IN ('document_print','document_export')")).rows[0].n,beforeOutput);
+ assert.equal((await request('documents/'+documentId+'/print','POST',{version:finalized.data.version},manager)).status,200);
  current=finalized.data;
  const attempts=await Promise.all([request('documents/'+documentId,'PATCH',{...current,title:'Revision A'},manager),request('documents/'+documentId,'PATCH',{...current,title:'Revision B'},other)]);
  assert.deepEqual(attempts.map(x=>x.status).sort(),[200,409]);
@@ -161,4 +165,14 @@ test('runtime refuses both owner credentials and inherited owner membership',asy
   await root.query(`CREATE ROLE ${role} LOGIN IN ROLE postgres`);const inherited=new URL(ownerURL);inherited.username=role;inherited.password='';process.env.DATABASE_URL=inherited.href;
   await assert.rejects(()=>transaction(c=>c.query('SELECT 1')),/Unsafe runtime/);
  }finally{await closeDatabase();process.env.DATABASE_URL=previous;await root.query(`DROP ROLE IF EXISTS ${role}`);}
+});
+
+
+test('Administrator-only readiness and runtime credential CLI use no owner privileges',async()=>{
+ assert.equal((await request('ready')).status,401);
+ assert.equal((await request('ready','GET',null,admin)).status,200);
+ assert.equal((await request('ready','GET',null,await login('manager@test.invalid'))).status,403);
+ assert.equal((await request('ready','GET',null,await login('employee@test.invalid'))).status,403);
+ const result=spawnSync(process.execPath,['scripts/check-runtime.js'],{encoding:'utf8',env:{...process.env,DATABASE_URL:appURL.href},timeout:20000});
+ assert.equal(result.status,0,result.stderr);assert.deepEqual(JSON.parse(result.stdout),{ready:true});
 });

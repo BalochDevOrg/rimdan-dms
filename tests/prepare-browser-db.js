@@ -15,6 +15,6 @@ if(process.argv[2]==='drop'){
  await migrate(url.href);await bootstrap(url.href,'admin@test.invalid','Fictional-Test-Password-2026');
  await c.query("DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='rimdan_test_app') THEN CREATE ROLE rimdan_test_app LOGIN; END IF; END $$");await c.query('GRANT rimdan_runtime TO rimdan_test_app');
  const db=new pg.Client({connectionString:url.href});await db.connect();const hash=await hashPassword('Fictional-Test-Password-2026');
- for(const [email,role] of [['manager@test.invalid','manager'],['employee@test.invalid','employee']])await db.query('INSERT INTO accounts(email,password_hash,role,active) VALUES($1,$2,$3,true)',[email,hash,role]);
+ for(const [email,role] of [['manager@test.invalid','manager'],['employee@test.invalid','employee'],['other@test.invalid','manager']])await db.query('INSERT INTO accounts(email,password_hash,role,active) VALUES($1,$2,$3,true)',[email,hash,role]);
  await db.end();await c.end();url.username='rimdan_test_app';url.password='';console.log(JSON.stringify({name,url:url.href}));
 }

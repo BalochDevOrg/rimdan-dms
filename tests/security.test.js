@@ -119,8 +119,9 @@ test('isolation verifier detects regressions in ACLs, function paths and default
    'ALTER DEFAULT PRIVILEGES GRANT EXECUTE ON FUNCTIONS TO PUBLIC',
    'GRANT SELECT(email) ON public.accounts TO PUBLIC',
    'GRANT USAGE ON SEQUENCE public.audit_records_id_seq TO PUBLIC',
-   'ALTER ROLE rimdan_runtime BYPASSRLS'];
-  if(Number((await c.query('SHOW server_version_num')).rows[0].server_version_num)>=170000)regressions.push('GRANT MAINTAIN ON public.schema_migrations TO service_role');
+   'ALTER ROLE rimdan_runtime BYPASSRLS',
+   'GRANT USAGE ON SEQUENCE public.audit_records_id_seq TO rimdan_runtime'];
+  if(Number((await c.query('SHOW server_version_num')).rows[0].server_version_num)>=170000)regressions.push('GRANT MAINTAIN ON public.schema_migrations TO service_role','GRANT MAINTAIN ON public.schema_migrations TO rimdan_runtime');
   for(const sql of regressions){
    await c.query('BEGIN');try{await c.query(sql);await assert.rejects(()=>verifyIsolation(c,{requireApiRoles:true}));}finally{await c.query('ROLLBACK');}
   }

@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-export function fail(status,message){throw Object.assign(new Error(message),{status});}
+export function fail(status,message){throw Object.assign(new Error(message),{status,publicMessage:message});}
 export const uuid=value=>typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5a-f0-9][a-f0-9]{3}-[89ab0-9][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value);
 export const text=(value,max=1000)=>typeof value==='string'&&value.length<=max?value:fail(400,'Invalid text');
 export function validateDocument(value){

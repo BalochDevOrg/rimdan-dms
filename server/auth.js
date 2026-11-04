@@ -1,5 +1,6 @@
 import {randomBytes,createHash,scrypt as derive,timingSafeEqual} from 'node:crypto';
 import {promisify} from 'node:util';
+import {fault} from './errors.js';
 const scrypt=promisify(derive),options={N:131072,r:8,p:1,maxmem:256*1024*1024};
 export const token=()=>randomBytes(32).toString('base64url');
 export const digest=value=>createHash('sha256').update(value).digest('hex');
@@ -16,9 +17,9 @@ export async function verifyPassword(password,encoded){
 }
 export function constantEqual(a,b){const x=Buffer.from(a||''),y=Buffer.from(b||'');return x.length===y.length&&timingSafeEqual(x,y);}
 export function configuration(){
- const origin=new URL(process.env.APP_ORIGIN||'https://not-configured.invalid');
+ let origin;try{origin=new URL(process.env.APP_ORIGIN);}catch{throw fault(503,'configuration_origin','Server origin configuration is invalid');}
  const local=process.env.APP_ENV==='development'&&['127.0.0.1','localhost','[::1]'].includes(origin.hostname)&&process.env.VERCEL!=='1';
- if(!process.env.APP_ORIGIN||(!local&&origin.protocol!=='https:'))throw Object.assign(new Error('Server origin must be configured securely'),{status:503});
+ if((!local&&origin.protocol!=='https:')||!['http:','https:'].includes(origin.protocol)||origin.username||origin.password||origin.pathname!=='/'||origin.search||origin.hash)throw fault(503,'configuration_origin','Server origin configuration is invalid');
  return {origin:origin.origin,local,cookie:local?'rimdan_dev_session':'__Host-rimdan_session'};
 }
 export function cookie(value,clear=false){const c=configuration();return `${c.cookie}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${clear?0:28800}${c.local?'':'; Secure'}`;}

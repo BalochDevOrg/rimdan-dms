@@ -3,18 +3,23 @@
 const ServerClient=(()=>{
  let active=false,user=null,csrf='',templates=[],users=[],loadError='',inviteToken='',busy=false,recovery=null,nextOffset=null,searchTimer,searchVersion=0,stats={total:0,draft:0,finalized:0,archived:0};
  const strings={en:{login:'Sign in',email:'Email',password:'Password (12–128 characters)',logout:'Sign out',users:'Accounts',read:'Read',reader:'Finalized document',finalized:'Finalized',archived:'Archived',invite:'Create account / invitation',role:'Role',manager:'Manager',employee:'Employee',administrator:'Administrator',import:'Import browser-local drafts',finalize:'Finalize',archive:'Archive',remove:'Delete document',retry:'Retry',templates:'Manage templates',save:'Save',accept:'Accept invitation',private:'Company data is stored on the server. Browser-local drafts are separate until explicitly imported.',denied:'Access denied.',failed:'The server operation failed. Your unsaved content remains open.',saveFirst:'Save the document before printing or exporting.',imported:'Local draft import completed. Original browser copies were preserved.',confirmImport:'Import local drafts into the company database? Original copies will remain in this browser.',confirmDelete:'Delete this company document?',readOnly:'Read-only account. PDF and printing are disabled.',duplicate:'Draft copy created. Images not authorized for reuse were omitted.',local:'Browser-local prototype',templateKey:'Template key',nameEn:'English name',nameFa:'Persian name',bodyEn:'English content',bodyFa:'Persian content',newTemplate:'New template'},fa:{login:'ورود',email:'ایمیل',password:'گذرواژه (۱۲ تا ۱۲۸ نویسه)',logout:'خروج',users:'حساب‌ها',read:'مشاهده',reader:'سند نهایی',finalized:'نهایی',archived:'بایگانی',invite:'ایجاد حساب / دعوت‌نامه',role:'نقش',manager:'مدیر',employee:'کارمند',administrator:'مدیر سامانه',import:'انتقال پیش‌نویس‌های مرورگر',finalize:'نهایی کردن',archive:'بایگانی',remove:'حذف سند',retry:'تلاش دوباره',templates:'مدیریت قالب‌ها',save:'ذخیره',accept:'پذیرش دعوت‌نامه',private:'اطلاعات شرکت روی سرور ذخیره می‌شود. پیش‌نویس‌های مرورگر فقط با انتقال صریح وارد سامانه می‌شوند.',denied:'دسترسی مجاز نیست.',failed:'عملیات سرور انجام نشد. تغییرات ذخیره‌نشده باز می‌مانند.',saveFirst:'پیش از چاپ یا خروجی، سند را ذخیره کنید.',imported:'انتقال انجام شد. نسخه‌های اصلی مرورگر حفظ شدند.',confirmImport:'پیش‌نویس‌های مرورگر به پایگاه داده شرکت منتقل شوند؟ نسخه‌های اصلی در مرورگر باقی می‌مانند.',confirmDelete:'این سند شرکت حذف شود؟',readOnly:'حساب فقط‌خواندنی است. چاپ و خروجی PDF غیرفعال است.',duplicate:'نسخه مشابه ساخته شد. تصاویر بدون مجوز استفاده دوباره حذف شدند.',local:'نمونه محلی مرورگر',templateKey:'شناسه قالب',nameEn:'نام انگلیسی',nameFa:'نام فارسی',bodyEn:'متن انگلیسی',bodyFa:'متن فارسی',newTemplate:'قالب جدید'}};
+ Object.assign(strings.en,{newerEdits:'The saved snapshot is stored. Newer edits remain unsaved; save again before finalizing or printing.',changedDuringOutput:'The document changed while preparing output. Save or reopen it before printing.',failed:'The server operation failed. Please retry.',unavailable:'The service is temporarily unavailable. Please retry or contact the Administrator.',credentials:'Invalid email or password.',expired:'Your session expired. Sign in again.'});
+ Object.assign(strings.fa,{newerEdits:'نسخه ذخیره شد. تغییرات جدید هنوز ذخیره نشده‌اند؛ پیش از نهایی کردن یا چاپ دوباره ذخیره کنید.',changedDuringOutput:'هنگام آماده‌سازی خروجی، سند تغییر کرد. پیش از چاپ آن را ذخیره یا دوباره باز کنید.',failed:'عملیات سرور انجام نشد. دوباره تلاش کنید.',unavailable:'سرویس موقتاً در دسترس نیست. دوباره تلاش کنید یا با مدیر سامانه تماس بگیرید.',credentials:'ایمیل یا گذرواژه نادرست است.',expired:'نشست شما پایان یافته است. دوباره وارد شوید.'});
  const tr=k=>strings[lang][k]||k;
  const staff=()=>user&&user.role!=='employee';
  async function api(path,method='GET',data){
   const response=await fetch('/api/v1/'+path,{method,credentials:'same-origin',cache:'no-store',headers:{...(data?{'Content-Type':'application/json'}:{}),...(csrf?{'X-CSRF-Token':csrf}:{})},body:data?JSON.stringify(data):undefined});
-  if(!response.ok){const detail=await response.json().catch(()=>({}));const e=new Error(detail.error||'Request failed');e.status=response.status;e.path=path;if(response.status===403&&user&&path!=='session'){const check=await fetch('/api/v1/session',{credentials:'same-origin',cache:'no-store'});if(check.ok){const current=await check.json();if(current.user.role!==user.role){clearMemory();user=current.user;csrf=current.csrf;document.documentElement.dataset.role=user.role;await refresh();page='documents';render();}}}
-   if(response.status===401&&user){if(dirty&&working&&staff())recovery={accountId:user.id,draft:structuredClone(working)};clearMemory(false);authScreen();}throw e;}
+  if(!response.ok){const detail=await response.json().catch(()=>({}));const e=new Error(detail.error||'Request failed');e.status=response.status;e.path=path;e.requestId=detail.requestId;if(response.status===403&&user&&path!=='session'){const check=await fetch('/api/v1/session',{credentials:'same-origin',cache:'no-store'});if(check.ok){const current=await check.json();if(current.user.role!==user.role){clearMemory();user=current.user;csrf=current.csrf;document.documentElement.dataset.role=user.role;await refresh();page='documents';render();}}}
+   if(response.status===401&&user){if(dirty&&working&&staff())recovery={accountId:user.id,source:working,draft:structuredClone(working)};clearMemory(false);authScreen();}throw e;}
   return response.json();
  }
- function error(e){if(e.status===401&&user){if(dirty&&working&&staff())recovery={accountId:user.id,draft:structuredClone(working)};clearMemory(false);authScreen();}loadError=e.status===403?tr('denied'):e.status===409?(lang==='fa'?'نسخه سند تغییر کرده است؛ پیش از ذخیره دوباره بارگیری کنید.':'Version conflict. Reopen before saving.'):tr('failed');if(page==='editor')toast(loadError);else{const node=document.getElementById('cloudError');if(node)node.textContent=loadError;else toast(loadError);}}
+ function error(e){if(e.status===401&&user){if(dirty&&working&&staff())recovery={accountId:user.id,source:working,draft:structuredClone(working)};clearMemory(false);authScreen();}loadError=e.status===401?tr(e.path==='login'?'credentials':'expired'):e.status===403?tr('denied'):e.status===409?(lang==='fa'?'نسخه سند تغییر کرده است؛ پیش از ذخیره دوباره بارگیری کنید.':'Document revision changed. Reopen before saving or printing.'):e.status===503?tr('unavailable'):tr('failed');if(/^[a-f0-9-]{36}$/i.test(e.requestId||''))loadError+=' · '+(lang==='fa'?'شناسه پیگیری: ':'Reference: ')+e.requestId;if(page==='editor')toast(loadError);else{const node=document.getElementById('cloudError');if(node)node.textContent=loadError;else toast(loadError);}}
  function clearMemory(clearRecovery=true){if(clearRecovery)recovery=null;user=null;csrf='';docs=[];working=null;docId=null;dirty=false;templates=[];users=[];letterheadImage='';DocumentMarks.reset();MobileUX.reset();document.documentElement.dataset.role='';}
  async function refresh(){docs=await api('documents');nextOffset=docs.length===1000?1000:null;stats=await api('summary');templates=staff()?await api('templates'):[];users=user.role==='administrator'?await api('users'):[];}
  function authScreen(){
+  document.documentElement.lang=lang;document.documentElement.dir=lang==='fa'?'rtl':'ltr';document.getElementById('app').dir=document.documentElement.dir;
+  document.getElementById('langBtn').textContent=lang==='fa'?'English':'فارسی';
+  document.querySelectorAll('[data-i]').forEach(node=>node.textContent=t(node.dataset.i));
   MobileUX.closeNavigation(false);document.querySelector('.main-wrap').inert=false;
   document.documentElement.dataset.auth='signed-out';document.documentElement.dataset.role='';
   document.getElementById('view').innerHTML=`<section class="auth-panel panel"><h1>${inviteToken?tr('accept'):tr('login')}</h1><p id="cloudError" role="alert">${escapeHTML(loadError)}</p><form id="authForm">${inviteToken?'':`<label for="authEmail">${tr('email')}</label><input id="authEmail" type="email" autocomplete="username" required maxlength="254">`}<label for="authPassword">${tr('password')}</label><input id="authPassword" type="password" autocomplete="${inviteToken?'new-password':'current-password'}" minlength="12" maxlength="128" required><button class="primary">${inviteToken?tr('accept'):tr('login')}</button></form></section>`;
@@ -30,6 +35,8 @@ const ServerClient=(()=>{
   inviteToken=location.hash.startsWith('#invite=')?location.hash.slice(8):'';if(inviteToken)history.replaceState(null,'',location.pathname+location.search);
   if(document.querySelector('meta[name=rimdan-mode]')?.content!=='server'){active=false;render();return;}
   Object.assign(copy.en,{pending:'Archived',approved:'Finalized',saved:'Draft saved to company database',savedState:'Saved to company database',demoMode:'Company workspace',demoOnly:'Company workspace',prototype:'COMPANY DATABASE'});Object.assign(copy.fa,{pending:'بایگانی',approved:'نهایی',saved:'پیش‌نویس در پایگاه داده شرکت ذخیره شد',savedState:'ذخیره‌شده در پایگاه داده شرکت',demoMode:'فضای کاری شرکت',demoOnly:'فضای کاری شرکت',prototype:'پایگاه داده شرکت'});
+  Object.assign(copy.en,{settingsSub:'Company workspace information and browser-local draft controls.',securityHelp:'Use your assigned company account. The server enforces account and document access. Contact the Administrator for access or account recovery.',demoNotice:'Company documents and private images are stored on the server. Browser-local drafts remain separate until explicitly imported.',clearDemo:'Clear browser-local prototype drafts',clearConfirm:'Delete only prototype drafts stored in this browser? Company records will remain on the server.',footer:'Rimdan Trade company workspace · Authorized staff only'});
+  Object.assign(copy.fa,{settingsSub:'اطلاعات فضای کاری شرکت و مدیریت پیش‌نویس‌های محلی مرورگر.',securityHelp:'از حساب اختصاصی شرکت استفاده کنید. دسترسی حساب و اسناد در سرور کنترل می‌شود. برای دسترسی یا بازیابی حساب با مدیر سامانه تماس بگیرید.',demoNotice:'اسناد شرکت و تصاویر خصوصی در سرور ذخیره می‌شوند. پیش‌نویس‌های محلی مرورگر تنها با انتقال صریح وارد سامانه می‌شوند.',clearDemo:'پاک کردن پیش‌نویس‌های نمونه این مرورگر',clearConfirm:'فقط پیش‌نویس‌های نمونه این مرورگر حذف شوند؟ اسناد شرکت در سرور باقی می‌مانند.',footer:'فضای کاری شرکت ریمدان · ویژه کارکنان مجاز'});
   try{
    const response=await fetch('/api/v1/config',{cache:'no-store',credentials:'same-origin'});
    active=true;letterheadImage='';document.documentElement.dataset.auth='signed-out';if(!response.ok)throw Error('API unavailable');
@@ -51,16 +58,58 @@ const ServerClient=(()=>{
   if(value.letterhead==='custom'&&!value.letterheadAsset)value.letterheadAsset=(await api('assets','POST',{kind:'letterhead',dataUrl:value.customLetterhead})).id;
   delete value.customLetterhead;return value;
  }
+ // The editable snapshot is independent of server-owned identity/revision fields.
+ function setBusy(value){busy=value;for(const id of ['saveBtn','printBtn','pdfBtn']){const button=document.getElementById(id);if(button)button.disabled=value;}}
+ function draftSignature(value){const {id,version,updated,createdBy,importKey,status,...draft}=value;return JSON.stringify(draft);}
+ function retainSavedIdentity(current,snapshot,saved){
+  for(const key of ['id','version','updated','createdBy','importKey','status'])current[key]=saved[key];
+  for(const kind of ['signature','stamp']){
+   if(current.marks?.[kind]&&current.marks[kind].src===snapshot.marks?.[kind]?.src&&saved.marks?.[kind])current.marks[kind].assetId=saved.marks[kind].assetId;
+  }
+  if(current.letterhead==='custom'&&current.customLetterhead===snapshot.customLetterhead&&saved.letterheadAsset)current.letterheadAsset=saved.letterheadAsset;
+ }
+ function renderEditorPreservingFocus(){
+  const node=document.activeElement,focus={id:node?.id,start:node?.selectionStart,end:node?.selectionEnd};
+  render();const next=document.getElementById(focus.id);
+  if(next){next.focus({preventScroll:true});if(typeof focus.start==='number'&&next.setSelectionRange)try{next.setSelectionRange(focus.start,focus.end);}catch{}}
+ }
  async function save(status){
   if(!staff()||busy)return;captureEditor();if(!working.title.trim()){MobileUX.setView('edit');toast(t('required'));document.getElementById('docTitle').focus();return;}
-  busy=true;document.getElementById('saveBtn').disabled=true;
-  try{const source=working,payload=await prepare(working);payload.status=status||'draft';
-   const saved=await api('documents'+(docId?'/'+docId:''),docId?'PATCH':'POST',payload);
-   if(working!==source)return;working=await hydrate(saved);docId=saved.id;dirty=false;await refresh();render();toast(t('saved'));
-  }catch(e){error(e);}finally{busy=false;const b=document.getElementById('saveBtn');if(b)b.disabled=false;}
+  setBusy(true);
+  const source=working,snapshot=structuredClone(working),signature=draftSignature(snapshot),existingId=docId,actor=user.id;
+  const unchanged=()=>working===source&&draftSignature(working)===signature;let acknowledged=null;
+  try{
+   const payload=await prepare(snapshot);if(working!==source)return;
+   let saved=await api('documents'+(existingId?'/'+existingId:''),existingId?'PATCH':'POST',{...payload,status:existingId?(status||'draft'):'draft'});
+   if(working!==source)return;
+   acknowledged=saved;
+   // Creation/import stays draft-only. Only an unchanged new snapshot may then
+   // make a separately versioned Finalize/Archive transition.
+   if(!existingId&&status&&status!=='draft'&&unchanged())saved=await api('documents/'+saved.id,'PATCH',{...saved,status});
+   if(working!==source)return;
+   acknowledged=saved;
+   const hydrated=await hydrate(saved);if(working!==source)return;
+   if(unchanged()){working=hydrated;dirty=false;}
+   else{retainSavedIdentity(working,snapshot,saved);dirty=true;}
+   docId=saved.id;const visible=working;
+   await refresh();if(working!==visible||page!=='editor')return;
+   renderEditorPreservingFocus();setBusy(true);toast(dirty?tr('newerEdits'):t('saved'));
+  }catch(e){if(working===source&&acknowledged){retainSavedIdentity(source,snapshot,acknowledged);docId=acknowledged.id;dirty=true;}else if(acknowledged&&recovery?.accountId===actor&&recovery.source===source){retainSavedIdentity(recovery.draft,snapshot,acknowledged);}error(e);}finally{setBusy(false);}
  }
  async function duplicate(){if(!staff())return;if(!docId||dirty){toast(lang==='fa'?'پیش از ایجاد نسخه مشابه، پیش‌نویس را ذخیره کنید.':'Save the draft before making a copy.');return;}try{const d=await api(`documents/${docId}/duplicate`,'POST',{});dirty=false;await refresh();await open(d.id);toast(tr('duplicate'));}catch(e){error(e);}}
- async function print(operation){if(!staff())return;if(dirty||!docId){toast(tr('saveFirst'));return;}try{await api(`documents/${docId}/${operation}`,'POST',{});window.print();}catch(e){error(e);}}
+ async function print(operation){
+  if(!staff()||busy)return;if(dirty||!docId){toast(tr('saveFirst'));return;}
+  const source=working,signature=JSON.stringify(working);setBusy(true);
+  try{
+   const authorized=await api(`documents/${docId}/${operation}`,'POST',{version:source.version});
+   const hydrated=await hydrate(authorized);
+   if(working!==source||dirty||JSON.stringify(working)!==signature){if(working===source)toast(tr('changedDuringOutput'));return;}
+   working=hydrated;render();setBusy(true);const rendered=working,renderedSignature=JSON.stringify(working);
+   await Promise.all([...document.querySelectorAll('#paperViewport img')].map(img=>img.decode()));
+   if(working!==rendered||dirty||JSON.stringify(working)!==renderedSignature){if(working===rendered)toast(tr('changedDuringOutput'));return;}
+   window.print();
+  }catch(e){error(e);}finally{setBusy(false);}
+ }
  function readerPage(){
   const temp=document.createElement('template');temp.innerHTML=editor();const panel=temp.content.querySelector('.preview-panel');
   panel.querySelector('#adjustMarks')?.remove();panel.querySelector('#openMarkTools')?.remove();
