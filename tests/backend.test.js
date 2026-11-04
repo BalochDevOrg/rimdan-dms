@@ -179,25 +179,28 @@ test('Administrator-only readiness and runtime credential CLI use no owner privi
 
 
 test('Phase 3 selected audiences are enforced for staff and finalized employees',async()=>{
- const targets=await request('share-targets','GET',null,manager);
+ // Earlier tests exercise deactivation and session revocation; create fresh fixtures.
+ const currentManager=await login('manager@test.invalid');
+ const currentEmployee=await login('employee@test.invalid');
+ const targets=await request('share-targets','GET',null,currentManager);
  assert.equal(targets.status,200);
  const recipient=targets.data.find(x=>x.email==='employee@test.invalid');
  assert.ok(recipient?.id);
- const created=await request('documents','POST',{...content(),title:'Restricted fictional test',audience:'selected',visibleTo:[recipient.id]},manager);
+ const created=await request('documents','POST',{...content(),title:'Restricted fictional test',audience:'selected',visibleTo:[recipient.id]},currentManager);
  assert.equal(created.status,200);
  const id=created.data.id;
  assert.equal((await request('documents/'+id,'GET',null,other)).status,404);
- assert.equal((await request('documents/'+id,'GET',null,employee)).status,404);
- const finished=await request('documents/'+id,'PATCH',{...content(),title:'Restricted fictional test',audience:'selected',visibleTo:[recipient.id],status:'finalized',version:created.data.version},manager);
+ assert.equal((await request('documents/'+id,'GET',null,currentEmployee)).status,404);
+ const finished=await request('documents/'+id,'PATCH',{...content(),title:'Restricted fictional test',audience:'selected',visibleTo:[recipient.id],status:'finalized',version:created.data.version},currentManager);
  assert.equal(finished.status,200);
- assert.equal((await request('documents/'+id,'GET',null,employee)).status,200);
+ assert.equal((await request('documents/'+id,'GET',null,currentEmployee)).status,200);
  assert.equal((await request('documents/'+id,'GET',null,other)).status,404);
  assert.equal((await request('documents/'+id,'GET',null,admin)).status,200);
  assert.equal((await request('documents/'+id,'PATCH',{...content(),version:finished.data.version},other)).status,404);
  assert.equal((await request('documents/'+id,'POST',{version:finished.data.version},other)).status,404);
- const unshared=await request('documents/'+id,'PATCH',{...content(),title:'Restricted fictional test',audience:'selected',visibleTo:[],status:'finalized',version:finished.data.version},manager);
+ const unshared=await request('documents/'+id,'PATCH',{...content(),title:'Restricted fictional test',audience:'selected',visibleTo:[],status:'finalized',version:finished.data.version},currentManager);
  assert.equal(unshared.status,200);
- assert.equal((await request('documents/'+id,'GET',null,employee)).status,404);
+ assert.equal((await request('documents/'+id,'GET',null,currentEmployee)).status,404);
 });
 test('Phase 3 manual one-time password reset revokes sessions and rejects replay',async()=>{
  const target=(await owner.query("SELECT id FROM accounts WHERE email='employee@test.invalid'")).rows[0];
