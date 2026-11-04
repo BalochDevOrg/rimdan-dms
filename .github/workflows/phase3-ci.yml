@@ -36,6 +36,8 @@ jobs:
       - run: npm ci
       - name: Isolated PostgreSQL and security tests
         run: npm test
+      - name: Validate unmigrated Phase 1 schema compatibility
+        run: node --test --test-concurrency=1 tests/legacy-compat.test.js
       - name: Build static application
         run: npm run build
       - name: Validate built Phase 3 assets
