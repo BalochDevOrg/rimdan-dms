@@ -15,6 +15,7 @@ jobs:
         image: postgres:18
         env:
           POSTGRES_PASSWORD: fictional-ci-password
+          POSTGRES_HOST_AUTH_METHOD: trust # Disposable CI container only; tests intentionally use passwordless roles
         ports:
           - 5432:5432
         options: >-
