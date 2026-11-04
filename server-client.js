@@ -180,7 +180,7 @@ const ServerClient=(()=>{
       const box=document.createElement('div');box.className='document-sharing form-field';
       const audience=working.audience||'all',selection=new Set(working.visibleTo||[]);
       box.innerHTML=`<label for="documentAudience">${lang==='fa'?'دسترسی سند':'Document access'}</label><select id="documentAudience"><option value="all" ${audience==='all'?'selected':''}>${lang==='fa'?'همه کاربران مجاز':'All authorized users'}</option><option value="selected" ${audience==='selected'?'selected':''}>${lang==='fa'?'کاربران انتخاب‌شده':'Selected users only'}</option></select><div id="documentRecipients" ${audience==='selected'?'':'hidden'}><p class="muted">${lang==='fa'?'انتخاب دریافت‌کنندگان':'Choose recipients'}</p>${shareTargets.map(x=>`<label class="recipient-option"><input type="checkbox" value="${x.id}" ${selection.has(x.id)?'checked':''}><span>${escapeHTML(x.email)} · ${tr(x.role)}</span></label>`).join('')}</div>`;
-      setup.append(box);
+      setup.after(box);
       box.querySelector('#documentAudience').onchange=e=>{working.audience=e.target.value;working.visibleTo=e.target.value==='selected'?[...box.querySelectorAll('input:checked')].map(x=>x.value):[];box.querySelector('#documentRecipients').hidden=e.target.value!=='selected';dirty=true;document.getElementById('saveState').textContent=t('unsaved');};
       box.querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{working.visibleTo=[...box.querySelectorAll('input:checked')].map(x=>x.value);dirty=true;document.getElementById('saveState').textContent=t('unsaved');});
     }
