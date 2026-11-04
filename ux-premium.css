@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Estedad:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Source+Serif+4:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;500;600;700&family=Estedad:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Lateef:wght@400;700&family=Markazi+Text:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700&family=Source+Serif+4:wght@400;600;700&family=Tajawal:wght@400;500;700&display=swap');
 /* Rimdan premium workspace – additive, scope-aware presentation layer.
    Never changes the physical A4 print geometry or role authorizations. */
 :root{--gold:#cba15c;--gold-light:#f7ebd4;--navy:#0c233c;--navy2:#163651;--bg:#f5f6f8;--ink:#142a42;--muted:#67788c;--line:#e1e6ec;--shadow:0 12px 36px rgba(17,39,64,.07);--radius:16px}
@@ -225,3 +225,53 @@ button.secondary:hover:not(:disabled),.secondary:hover:not(:disabled),.rimdan-se
  .topbar,.sidebar,.rimdan-sharing-notice{display:none!important}
  button.primary,.primary{background:none!important;color:#000!important;box-shadow:none!important}
 }
+
+/* Phase 3 final interaction polish */
+.rimdan-section-heading{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:4px 0 20px;flex-wrap:wrap}
+.rimdan-section-heading h1,.rimdan-section-heading h2{margin:0 0 5px;color:var(--navy)}
+.rimdan-section-heading p{margin:0}
+.rimdan-staff-panel{padding:clamp(18px,2.5vw,30px)}
+.rimdan-account-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;border:1px solid #e7d9ba;background:linear-gradient(115deg,#fffefb,#fbf4e5);padding:20px;border-radius:15px;margin-bottom:26px}
+.rimdan-account-form>label{margin:0!important;min-width:0}
+.rimdan-account-form label:has(#staffPassword){grid-column:1/-1}
+.rimdan-account-form label input,.rimdan-account-form label select{display:block;width:100%;margin-top:6px}
+.rimdan-account-form>p,.rimdan-account-tools{grid-column:1/-1;margin:0}
+.rimdan-account-tools{display:flex;gap:10px;flex-wrap:wrap}
+.rimdan-account-form>button.primary{grid-column:1/-1;justify-self:start;width:auto;min-width:175px}
+.rimdan-staff-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:15px 10px!important}
+.rimdan-staff-identity{min-width:180px;display:grid;gap:2px}
+.rimdan-staff-identity b{overflow-wrap:anywhere}
+.rimdan-staff-identity small{font-size:11px;color:var(--muted)}
+.rimdan-staff-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rimdan-staff-actions button{min-height:38px;width:auto!important;padding:7px 13px}
+.rimdan-staff-actions select{max-width:140px;min-height:39px}
+#invitationOutput{display:block;min-height:20px;color:#166b47;font-weight:600;margin:14px 0}
+.format-details{display:block!important;border:1px solid #e6dabf;border-radius:12px;padding:10px 12px!important;background:#fffcf5;margin:12px 0}
+.format-details>summary{cursor:pointer;border-radius:9px;padding:9px 12px!important;background:var(--rimdan-gold-soft);font-weight:700;color:#764c13}
+.formatting{border:0!important;margin:12px 0 0!important;padding:5px!important}
+.format-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.format-toolbar label{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:0}
+.format-button{min-width:42px;min-height:42px;border:1px solid #d6bd8f!important;border-radius:9px;box-shadow:0 1px 3px #8b642018}
+.format-button:hover,.format-button[aria-pressed=true]{background:var(--rimdan-gold-soft)!important;color:#77501f!important}
+.rimdan-alignment-tools{display:inline-flex;background:#fff;border:1px solid #e5d4ae;padding:4px;border-radius:11px}
+.rimdan-editor-expand{font-size:20px}
+.preview-caption{align-items:center;gap:10px}
+.preview-caption h2{color:#a57225}
+.preview-panel .note,.preview-caption span{font-size:12px;line-height:1.65}
+.preview-scroll{scrollbar-color:#cba460 #e8edf1}
+.rimdan-page-progress{height:4px!important;background:var(--rimdan-gold-gradient)!important;background-size:200% auto!important}
+.rimdan-wait{position:fixed;z-index:110;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:11px;max-width:calc(100vw - 40px);pointer-events:none;padding:15px 22px;border-radius:14px;background:linear-gradient(135deg,#0e293e,#193c56);color:#ffe5aa;border:1px solid #d8ab56;box-shadow:0 18px 42px #001c3755;font-weight:650;font-size:13px}
+.rimdan-spinner{width:23px;height:23px;border:3px solid #e9b6584d;border-top-color:#ffe5a2;border-radius:50%;animation:rimdan-spin .85s linear infinite;flex-shrink:0}
+.rimdan-modal{border:1px solid #d4ac59;border-radius:18px;padding:0;width:min(440px,calc(100vw - 28px));box-shadow:0 23px 80px #061f3980;overflow:hidden;color:var(--ink);background:#fff}
+.rimdan-modal::backdrop{background:rgba(9,29,48,.67);backdrop-filter:blur(4px)}
+.rimdan-modal-header{background:linear-gradient(115deg,#0d263e,#214761);padding:20px 24px;color:#ffedc3;border-bottom:3px solid #c59843}
+.rimdan-modal-header h2{margin:0;font-size:18px;color:#fff0c7}
+.rimdan-modal-content{padding:23px 25px;line-height:1.85}
+.rimdan-modal-footer{display:flex;gap:12px;justify-content:flex-end;margin:0;padding:0 25px 24px}
+.rimdan-modal-footer button{min-width:100px;min-height:42px}
+.rimdan-modal-close{float:inline-end;width:32px;height:32px!important;border:1px solid #f6d68a70!important;border-radius:9px;background:transparent!important;color:#fff4db!important;font-size:20px}
+#saveState[data-sync=stored]::before{content:"✓  ";font-weight:bold}
+#saveState[data-sync=failed]::before{content:"!  ";font-weight:bold}
+#saveState[data-sync=saving]::before{content:"◌  "}
+@media(max-width:760px){.rimdan-account-form{grid-template-columns:1fr;padding:14px}.rimdan-account-form>label{grid-column:1/-1}.rimdan-account-form>button.primary{width:100%}.rimdan-staff-row{display:block}.rimdan-staff-actions{margin-top:9px}.rimdan-modal-footer{flex-direction:column}.rimdan-modal-footer button{width:100%}}
+@media print{.rimdan-wait,.rimdan-modal,.rimdan-page-progress{display:none!important}}
