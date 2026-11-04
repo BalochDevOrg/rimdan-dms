@@ -8,7 +8,7 @@ export function validateDocument(value){
  const f=d.format||{};
  const result={title:text(d.title,300).trim(),recipient:text(d.recipient||'',500),number:text(d.number||'',100),body:text(d.body||'',200000),type,language,
   date:/^\d{4}-\d{2}-\d{2}$/.test(d.date||'')&&!isNaN(Date.parse(d.date))?d.date:fail(400,'Invalid date'),
-  format:{font:['Vazirmatn','Estedad','Noto Naskh Arabic','Tahoma','Arial','Georgia','Times New Roman','Inter','Source Serif 4'].includes(f.font)?f.font:'Vazirmatn',size:[10,11,12,14,16,18,20,24].includes(f.size)?f.size:12,align:['start','center','end','justify'].includes(f.align)?f.align:'start',spacing:[1.5,1.95,2.3].includes(f.spacing)?f.spacing:1.95,bold:f.bold===true,italic:f.italic===true,underline:f.underline===true},
+  format:{font:["Vazirmatn","Estedad","Noto Naskh Arabic","Noto Sans Arabic","IBM Plex Sans Arabic","Amiri","Cairo","Tajawal","Markazi Text","Lateef","Tahoma","Arial","Georgia","Times New Roman","Inter","Source Serif 4"].includes(f.font)?f.font:'Vazirmatn',size:[10,11,12,14,16,18,20,24].includes(f.size)?f.size:12,align:['start','center','end','justify'].includes(f.align)?f.align:'start',spacing:[1.5,1.95,2.3].includes(f.spacing)?f.spacing:1.95,bold:f.bold===true,italic:f.italic===true,underline:f.underline===true},
   letterhead:d.letterhead==='custom'?'custom':`official-${language}`,marks:{signature:null,stamp:null}};
  if(!result.title)fail(400,'Document title required');
  if(result.letterhead==='custom'){if(!uuid(d.letterheadAsset))fail(400,'Private letterhead asset required');result.letterheadAsset=d.letterheadAsset;}
