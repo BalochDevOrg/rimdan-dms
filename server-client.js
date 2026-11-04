@@ -125,8 +125,11 @@ const ServerClient=(()=>{
    const hydrated=await hydrate(authorized);
    if(working!==source||dirty||JSON.stringify(working)!==signature){if(working===source)toast(tr('changedDuringOutput'));return;}
    working=hydrated;render();setBusy(true);const rendered=working,renderedSignature=JSON.stringify(working);
+   await Promise.race([document.fonts?.ready||Promise.resolve(),new Promise(resolve=>setTimeout(resolve,4500))]);
+   Letterheads.paginate();
    await Promise.all([...document.querySelectorAll('#paperViewport img')].map(img=>img.decode()));
    if(working!==rendered||dirty||JSON.stringify(working)!==renderedSignature){if(working===rendered)toast(tr('changedDuringOutput'));return;}
+   toast(lang==='fa'?'پیش‌نمایش PDF آماده است. تنظیمات چاپ مرورگر را بررسی کنید.':'PDF preview ready. Review the browser print settings.');
    window.print();
   }catch(e){error(e);}finally{setBusy(false);}
  }
