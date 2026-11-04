@@ -48,7 +48,7 @@
     if(!icons[page])return;
     let icon=$('.nav-icon',btn);
     if(!icon){icon=document.createElement('span');icon.className='nav-icon';btn.prepend(icon);}
-    const artwork=svg(page);if(icon.innerHTML!==artwork)icon.innerHTML=artwork;
+    if(icon.dataset.icon!==page){icon.innerHTML=svg(page);icon.dataset.icon=page;}
     let label=$('.nav-text',btn)||btn.querySelector('span:not(.nav-icon)');
     if(!label){const text=[...btn.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim();if(text){[...btn.childNodes].filter(n=>n.nodeType===3).forEach(n=>n.remove());label=document.createElement('span');label.className='nav-text';label.textContent=text;btn.append(label);}}
     if(label){label.classList.add('nav-text');btn.title=label.textContent.trim();btn.setAttribute('aria-label',label.textContent.trim());}
