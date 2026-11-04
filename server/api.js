@@ -53,7 +53,7 @@ export default async function handler(req,res){
   const url=new URL(req.url,'https://request.invalid');
   const path=String(req.query?.path||url.searchParams.get('path')||url.pathname.replace(/^\/api\/v1\/?/,''));
   const parts=path.split('/').filter(Boolean),method=req.method;
-  route=['config','login','session','logout','ready','documents','assets','templates','users','invitations','audit','summary','share-targets','password-reset'].includes(parts[0])?parts[0]:'unknown';
+  route=['config','login','session','logout','ready','documents','assets','templates','users','invitations','audit','summary','share-targets','password-reset','capabilities'].includes(parts[0])?parts[0]:'unknown';
   const config=configuration();
   if(path==='config'&&method==='GET'){databaseOptions();return send(res,200,{mode:'server'});}
   stage='request_validation';
@@ -99,6 +99,7 @@ export default async function handler(req,res){
   stage='resource';
   const result=await transaction(async c=>{
    if(path==='ready'&&method==='GET'){admin(user);await c.query('SELECT 1');return {ready:true};}
+   if(path==='capabilities'&&method==='GET')return {phase3:await phase3Enabled(c)};
     if(path==='share-targets'&&method==='GET'){staff(user);return await phase3Enabled(c)?(await c.query('SELECT * FROM list_share_targets()')).rows:[];}
    if(path==='summary'&&method==='GET')return (await c.query("SELECT count(*)::int AS total,count(*) FILTER(WHERE status='draft')::int AS draft,count(*) FILTER(WHERE status='finalized')::int AS finalized,count(*) FILTER(WHERE status='archived')::int AS archived FROM documents")).rows[0];
    if(parts[0]==='users'){
