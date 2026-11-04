@@ -51,6 +51,10 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Verify login page responsiveness without a database
         run: python tests/browser_startup.py
+      - name: Install PDF test helper
+        run: python -m pip install pypdf==5.9.0
+      - name: Verify Persian and English PDF pagination
+        run: python tests/print_layout.py
       - name: Dependency audit
         run: npm audit --omit=dev --audit-level=high
       - name: Verify baseline SQL was not rewritten
