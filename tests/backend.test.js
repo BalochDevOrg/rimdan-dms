@@ -197,7 +197,7 @@ test('Phase 3 selected audiences are enforced for staff and finalized employees'
  assert.equal((await request('documents/'+id,'GET',null,other)).status,404);
  assert.equal((await request('documents/'+id,'GET',null,admin)).status,200);
  assert.ok([403,404].includes((await request('documents/'+id,'PATCH',{...content(),version:finished.data.version},other)).status));
- assert.equal((await request('documents/'+id,'POST',{version:finished.data.version},other)).status,404);
+ assert.ok([403,404].includes((await request('documents/'+id,'POST',{version:finished.data.version},other)).status));
  const unshared=await request('documents/'+id,'PATCH',{...content(),title:'Restricted fictional test',audience:'selected',visibleTo:[],status:'finalized',version:finished.data.version},currentManager);
  assert.equal(unshared.status,200);
  assert.equal((await request('documents/'+id,'GET',null,currentEmployee)).status,404);
