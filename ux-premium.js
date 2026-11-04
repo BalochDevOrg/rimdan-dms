@@ -103,5 +103,15 @@
  let queued=false;
  const observer=new MutationObserver(()=>{if(queued)return;queued=true;queueMicrotask(()=>{queued=false;decorate();});});
  observer.observe($('#app')||document.body,{childList:true,subtree:true});
+ const notification=$('#toast');
+ if(notification){
+  const toastObserver=new MutationObserver(()=>{
+   if(!notification.classList.contains('show')||notification.querySelector('.rimdan-toast-close'))return;
+   const close=document.createElement('button');close.type='button';close.className='rimdan-toast-close';
+   close.textContent='×';close.setAttribute('aria-label',document.documentElement.lang==='fa'?'بستن':'Dismiss');
+   close.onclick=()=>notification.classList.remove('show');notification.append(close);
+  });
+  toastObserver.observe(notification,{attributes:true,attributeFilter:['class'],childList:true});
+ }
  decorate();
 })();
