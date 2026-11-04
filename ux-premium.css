@@ -116,3 +116,8 @@ html[data-editor-wide=true] .editor-grid{grid-template-columns:minmax(480px,min(
 @media(max-width:980px){html[data-editor-wide=true] .editor-grid{grid-template-columns:1fr}}
 @media(max-width:760px){.sidebar{z-index:24!important}.toast{top:10px!important}.document-sharing{padding:10px}}
 @media print{.document-sharing,.rimdan-editor-expand,.rimdan-alignment-tools{display:none!important}.preview-panel{overflow:visible!important}}
+
+.rimdan-search-loading{display:grid;gap:10px;padding:20px 8px;min-height:170px}
+.rimdan-skeleton{display:block;height:32px;border-radius:8px;background:linear-gradient(90deg,#e7edf2 10%,#f7f9fb 45%,#e7edf2 80%);background-size:200% 100%;animation:rimdan-shimmer 1.1s linear infinite}
+@keyframes rimdan-shimmer{to{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){.rimdan-skeleton{animation:none}}
