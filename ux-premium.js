@@ -35,11 +35,50 @@
   updateCollapse();
  });
  updateCollapse();
- let pending=0,timer=null,progress;
- function showProgress(){if(!progress){progress=document.createElement('div');progress.className='rimdan-page-progress';progress.setAttribute('role','progressbar');progress.setAttribute('aria-label',tr('busy'));document.body.append(progress);}}
- function trackRequest(request){pending++;if(pending===1)timer=setTimeout(()=>{if(pending)showProgress()},140);return Promise.resolve(request).finally(()=>{pending=Math.max(0,pending-1);if(!pending){clearTimeout(timer);progress?.remove();progress=null;}});}
+ let pending=0,timer=null,progress,waiting;
+ function clearProgress(){progress?.remove();progress=null;waiting?.remove();waiting=null;}
+ function showProgress(){
+  if(pending<1)return;
+  if(!progress){progress=document.createElement('div');progress.className='rimdan-page-progress';progress.setAttribute('role','progressbar');progress.setAttribute('aria-label',tr('busy'));document.body.append(progress);}
+  if(!waiting){
+   waiting=document.createElement('div');waiting.className='rimdan-wait';waiting.setAttribute('role','status');waiting.setAttribute('aria-live','polite');
+   const spinner=document.createElement('span');spinner.className='rimdan-spinner';spinner.setAttribute('aria-hidden','true');
+   const label=document.createElement('span');label.textContent=document.documentElement.lang==='fa'?'در حال دریافت اطلاعات…':'Working on your request…';
+   waiting.append(spinner,label);document.body.append(waiting);
+  }
+ }
+ function trackRequest(request){
+  pending++;
+  if(pending===1)timer=setTimeout(()=>{if(pending)showProgress()},250);
+  return Promise.resolve(request).finally(()=>{
+   pending=Math.max(0,pending-1);
+   if(!pending){clearTimeout(timer);clearProgress();}
+  });
+ }
  const originalFetch=window.fetch.bind(window);
  window.fetch=(...args)=>trackRequest(originalFetch(...args));
+ async function confirmAction(message,options={}){
+  if(typeof HTMLDialogElement==='undefined')return window.confirm(message);
+  const dialog=document.createElement('dialog');dialog.className='rimdan-modal';
+  const header=document.createElement('div');header.className='rimdan-modal-header';
+  const title=document.createElement('h2');title.textContent=options.title||(document.documentElement.lang==='fa'?'تأیید عملیات':'Confirm action');
+  const close=document.createElement('button');close.type='button';close.className='rimdan-modal-close';close.textContent='×';close.setAttribute('aria-label','Close');
+  header.append(close,title);
+  const content=document.createElement('div');content.className='rimdan-modal-content';content.textContent=String(message);
+  const footer=document.createElement('div');footer.className='rimdan-modal-footer';
+  const cancel=document.createElement('button');cancel.type='button';cancel.className='secondary';cancel.textContent=document.documentElement.lang==='fa'?'انصراف':'Cancel';
+  const approve=document.createElement('button');approve.type='button';approve.className='primary';approve.textContent=options.confirmText||(document.documentElement.lang==='fa'?'تأیید':'Confirm');
+  footer.append(cancel,approve);dialog.append(header,content,footer);document.body.append(dialog);
+  return new Promise(resolve=>{
+   let result=false;
+   cancel.onclick=()=>dialog.close();
+   close.onclick=()=>dialog.close();
+   approve.onclick=()=>{result=true;dialog.close();};
+   dialog.addEventListener('close',()=>{dialog.remove();resolve(result);},{once:true});
+   try{dialog.showModal();}catch{dialog.remove();resolve(window.confirm(message));}
+  });
+ }
+ window.RimdanUI=Object.freeze({confirm:confirmAction});
  function decorate(){
   const navigation=$('#sidebar nav');
   if(navigation){
