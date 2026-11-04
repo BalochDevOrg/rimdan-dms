@@ -1,0 +1,45 @@
+name: Rimdan Phase 3 isolated validation
+on:
+  push:
+    branches:
+      - feature/rimdan-ux-redesign
+  pull_request:
+    branches:
+      - feature/remediation-phase-1
+jobs:
+  backend-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: fictional-ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:fictional-ci-password@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Isolated PostgreSQL and security tests
+        run: npm test
+      - name: Build static application
+        run: npm run build
+      - name: Dependency audit
+        run: npm audit --omit=dev --audit-level=high
+      - name: Verify baseline SQL was not rewritten
+        shell: bash
+        run: |
+          for f in migrations/00[1-8]_*.sql; do
+            git diff --exit-code 461f37bba1450818888e130c1a621a25dd87161c -- "$f"
+          done
