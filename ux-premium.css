@@ -91,3 +91,28 @@ html[lang=fa] .auth-panel{direction:rtl}
 @media(max-width:760px){.collapse-nav{display:none!important}.sidebar{width:254px!important}.sidebar .nav-text{display:inline!important}.editor-fields{padding:16px}.editor-fields .field-pair{gap:10px}.rimdan-toast-stack{top:12px} .auth-panel{margin:30px 10px!important}}
 @media print{.collapse-nav,.rimdan-toast-stack,.rimdan-page-progress{display:none!important}.editor-grid{display:block!important}.preview-panel{border:0!important;padding:0!important;background:white!important}.editor-fields{display:none!important}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+
+/* Final Phase 3 icon/tool and feedback refinements */
+.sidebar .nav-icon svg{display:block;width:20px;height:20px}
+.rimdan-alignment-tools{display:flex;gap:5px;margin-block:8px;flex-wrap:wrap}
+.rimdan-align-button{display:grid;place-items:center;min-width:42px;min-height:40px;border:1px solid #d9e0e6;background:#fff;color:#32495f;border-radius:8px}
+.rimdan-align-button:hover{background:#fff8ee;border-color:#c6a066}
+.rimdan-align-button[aria-pressed=true]{background:#fff1d7;border-color:#b78a4b;color:#80551f}
+.rimdan-editor-expand{min-width:40px;padding:6px 10px!important;font-weight:800;line-height:1.2}
+html[data-editor-wide=true] .editor-grid{grid-template-columns:minmax(480px,min(52vw,740px)) minmax(0,1fr)}
+.document-sharing{border:1px solid #e4dbc9;background:#fdfaf5;border-radius:12px;padding:15px;margin-block:16px}
+.document-sharing select{width:100%}
+.document-sharing .recipient-option{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#fff;border:1px solid #e4e8ed;border-radius:8px;margin:5px 0;font-size:12px;overflow-wrap:anywhere}
+.document-sharing .recipient-option input{width:18px;height:18px;flex-shrink:0;accent-color:#bb8f4a}
+.document-sharing #documentRecipients{max-height:230px;overflow:auto;padding:5px}
+.toast{top:18px!important;bottom:auto!important;left:50%!important;right:auto!important;inset-inline-end:auto!important;transform:translateX(-50%);max-width:min(510px,calc(100vw - 36px));border-radius:13px!important;border:1px solid #cca35e;padding:12px 44px 12px 17px!important;z-index:95!important;box-shadow:0 16px 28px #0b234344!important;line-height:1.6}
+.rimdan-toast-close{position:absolute;inset-inline-end:8px;top:50%;transform:translateY(-50%);width:30px;height:30px;padding:0;border:0;background:transparent;color:#fff;font-size:23px}
+.document-table .link{min-height:36px;padding:6px 11px!important;white-space:nowrap}
+.document-table .link[data-preview]{color:#304f69;background:#edf3f8;border-radius:8px}
+.document-table .link[data-preview]:hover{background:#fff2dc;color:#80541c}
+.doc-title{font-weight:700}
+.auth-panel #toggleForgot{margin:8px 0 0;width:auto;padding:8px 0;text-decoration:underline;font-size:13px}
+.auth-panel .muted{font-size:12px;line-height:1.8}
+@media(max-width:980px){html[data-editor-wide=true] .editor-grid{grid-template-columns:1fr}}
+@media(max-width:760px){.sidebar{z-index:24!important}.toast{top:10px!important}.document-sharing{padding:10px}}
+@media print{.document-sharing,.rimdan-editor-expand,.rimdan-alignment-tools{display:none!important}.preview-panel{overflow:visible!important}}
