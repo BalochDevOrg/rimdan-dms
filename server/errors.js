@@ -3,7 +3,7 @@ import {randomUUID} from 'node:crypto';
 export function fault(status,category,message){
  return Object.assign(new Error(message),{status,category,publicMessage:message});
 }
-const categories=new Set(['configuration_origin','configuration_database','configuration_certificate','database_role']);
+const categories=new Set(['configuration_origin','configuration_database','configuration_certificate','database_role','feature_unavailable']);
 const connectionFailures=new WeakSet();
 export function connectionFailure(error){
  if(error&&typeof error==='object')connectionFailures.add(error);
