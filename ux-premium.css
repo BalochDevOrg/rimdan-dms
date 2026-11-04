@@ -121,3 +121,107 @@ html[data-editor-wide=true] .editor-grid{grid-template-columns:minmax(480px,min(
 .rimdan-skeleton{display:block;height:32px;border-radius:8px;background:linear-gradient(90deg,#e7edf2 10%,#f7f9fb 45%,#e7edf2 80%);background-size:200% 100%;animation:rimdan-shimmer 1.1s linear infinite}
 @keyframes rimdan-shimmer{to{background-position:-200% 0}}
 @media(prefers-reduced-motion:reduce){.rimdan-skeleton{animation:none}}
+
+
+/* Rimdan Trade identity: metallic gold on deep navy inspired by the official seal.
+   A restrained gradient is used on interactive chrome only, never on the A4 letterhead. */
+:root{
+ --rimdan-gold-shadow:#75470e;
+ --rimdan-gold-amber:#c38a25;
+ --rimdan-gold-bright:#ffe9a2;
+ --rimdan-gold-edge:#eac66b;
+ --rimdan-gold-gradient:linear-gradient(120deg,#8e5e19 0%,#d8a13b 19%,#fff0bd 38%,#f6ca66 54%,#ae741e 78%,#e8b951 100%);
+ --rimdan-gold-soft:linear-gradient(110deg,#fff8e6,#f7e4b6 48%,#fff8e6);
+}
+.topbar{
+ background:linear-gradient(100deg,#091e33 0%,#102d47 64%,#1a3b53 100%)!important;
+ border-bottom:3px solid transparent!important;
+ border-image:linear-gradient(90deg,#7c4c12,#e3af45,#ffebad,#ac761d) 1!important;
+ box-shadow:0 8px 24px rgba(9,26,43,.16)!important;
+}
+.topbar .crumb,.topbar .crumb b,.topbar .top-label,.topbar [data-i],.topbar .mobile-toggle{color:#fce8bd!important}
+.topbar .sep{color:#d2ac65!important}
+.topbar .status-dot{box-shadow:0 0 0 4px rgba(231,185,86,.16)}
+.topbar .mini,.topbar .avatar{background:var(--rimdan-gold-gradient)!important;color:#192b3b!important;box-shadow:0 0 0 2px #fff3c65c!important}
+.topbar .outline-btn{
+ color:#ffe7ae!important;
+ background:linear-gradient(110deg,#173c57,#0f2d46)!important;
+ border:1px solid #d3a34c!important;
+ box-shadow:inset 0 1px 0 #ffdc8c52!important
+}
+.topbar .outline-btn:hover{background:linear-gradient(110deg,#254967,#20415e)!important}
+.sidebar .brand{border-bottom:1px solid #bd8b384d}
+.sidebar .brand-logo{filter:drop-shadow(0 4px 9px rgba(245,184,73,.18))}
+.sidebar .brand strong{color:#f9e4ac}
+.sidebar .brand small{color:#d6bf8a}
+.sidebar .nav{color:#c5d1d9}
+.sidebar .nav:hover{
+ background:linear-gradient(95deg,#1b3c55 10%,#36506a 100%);
+ border-color:#d7a34455;
+ box-shadow:inset 3px 0 #e9bf5d4d;
+ color:#fff6d9
+}
+.sidebar .nav.active{
+ background:linear-gradient(110deg,#1a3650,#2a455e)!important;
+ border:1px solid #d4ab5b77!important;
+ box-shadow:inset 3px 0 #e9bc61,0 3px 15px #030e1a24!important
+}
+.sidebar .nav.active .nav-icon{color:#ffda82!important}
+button.primary,.primary{
+ background:var(--rimdan-gold-gradient)!important;
+ color:#192a38!important;
+ border:1px solid #ab7623!important;
+ font-weight:750;
+ text-shadow:0 1px 0 #fff9e56e;
+ box-shadow:inset 0 1px 0 #fff6d5b5,0 5px 12px #a4793227!important
+}
+button.primary:hover:not(:disabled),.primary:hover:not(:disabled){
+ background:linear-gradient(120deg,#a67121,#f5c767 30%,#fff4c7 50%,#dd9e31 85%)!important;
+ color:#11283c!important;
+ border-color:#a56f17!important;
+ box-shadow:inset 0 1px 0 #fff7d9,0 8px 18px #a97a3040!important
+}
+button.primary:disabled,.primary:disabled{opacity:.6;cursor:not-allowed}
+button.secondary,.secondary,.outline-btn,.rimdan-search-actions button{
+ border-color:#d1af71!important;
+ background:linear-gradient(145deg,#fffdf8,#f7ead0)!important;
+ color:#6b471a!important
+}
+button.secondary:hover:not(:disabled),.secondary:hover:not(:disabled),.rimdan-search-actions button:hover{
+ background:var(--rimdan-gold-soft)!important;
+ border-color:#bf8b33!important;
+ box-shadow:0 3px 10px #a3762527
+}
+.stat-icon,.quick-icon{background:var(--rimdan-gold-soft)!important;color:#8e5d16!important;border:1px solid #ecd29a}
+.auth-panel{
+ background:linear-gradient(160deg,#fffefa 65%,#fbf3e2)!important;
+ border:1px solid #dfbd7e!important;
+ border-top:5px solid #d3a04c!important;
+ box-shadow:0 28px 65px #132b4330,0 2px 8px #b9873820!important
+}
+.auth-panel::before{
+ width:78px!important;height:78px!important;
+ background-color:#0d263d!important;
+ border:3px solid #dfb85e!important;
+ border-radius:18px!important;
+ box-shadow:0 4px 14px #a7772e38,inset 0 0 14px #dcb35c26!important
+}
+.auth-panel h1{color:#172f47!important}
+.auth-panel label{color:#6e4e22!important}
+.auth-panel input:focus,.cloud-panel input:focus{outline:2px solid #e5bd6d;outline-offset:1px}
+.auth-panel button.primary{width:100%;min-height:51px}
+.auth-panel #toggleForgot{color:#966616}
+.rimdan-sharing-notice{
+ font-size:12px;line-height:1.7;
+ padding:10px 12px;border-radius:10px;
+ background:#fff7e8;color:#765326;border:1px solid #ead5ad
+}
+@media(max-width:760px){
+ .topbar{padding-inline:14px!important}
+ .topbar .crumb{max-width:42vw;overflow:hidden;white-space:nowrap}
+ .topbar .top-label{display:none}
+}
+@media print{
+ .topbar,.sidebar,.rimdan-sharing-notice{display:none!important}
+ button.primary,.primary{background:none!important;color:#000!important;box-shadow:none!important}
+}
