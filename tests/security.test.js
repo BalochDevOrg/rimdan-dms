@@ -43,6 +43,8 @@ async function exercise(c){
    'SELECT * FROM public.schema_migrations',"INSERT INTO public.schema_migrations VALUES('forged','x',now())",
    "UPDATE public.schema_migrations SET checksum='forged'",'DELETE FROM public.schema_migrations',
    'TRUNCATE public.schema_migrations','SELECT email FROM public.accounts',
+   'SELECT * FROM public.document_recipients','SELECT * FROM public.password_resets',
+   'SELECT public.list_share_targets()',"SELECT public.redeem_password_reset('token','hash')",
    "SELECT nextval('public.audit_records_id_seq')"])await denied(c,role,sql);
  }
  await denied(c,'rimdan_runtime','SELECT * FROM public.schema_migrations');
@@ -54,8 +56,8 @@ async function exercise(c){
  }
  await c.query('DROP TABLE public.future_probe; DROP FUNCTION public.future_probe()');
 }
-test('fresh install commits eight migrations with Supabase-style default grants; rerun is idempotent',async()=>{
- const {url,c}=await fixture();try{await migrate(url);await migrate(url);assert.equal((await c.query('SELECT * FROM public.schema_migrations')).rowCount,8);await exercise(c);}finally{await c.end();}
+test('fresh install commits nine migrations with Supabase-style default grants; rerun is idempotent',async()=>{
+ const {url,c}=await fixture();try{await migrate(url);await migrate(url);assert.equal((await c.query('SELECT * FROM public.schema_migrations')).rowCount,9);await exercise(c);}finally{await c.end();}
 });
 test('operator CLI entrypoints migrate, verify isolation and bootstrap locally',async()=>{
  const {url,c}=await fixture();try{
