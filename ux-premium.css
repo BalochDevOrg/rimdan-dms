@@ -275,3 +275,29 @@ button.secondary:hover:not(:disabled),.secondary:hover:not(:disabled),.rimdan-se
 #saveState[data-sync=saving]::before{content:"◌  "}
 @media(max-width:760px){.rimdan-account-form{grid-template-columns:1fr;padding:14px}.rimdan-account-form>label{grid-column:1/-1}.rimdan-account-form>button.primary{width:100%}.rimdan-staff-row{display:block}.rimdan-staff-actions{margin-top:9px}.rimdan-modal-footer{flex-direction:column}.rimdan-modal-footer button{width:100%}}
 @media print{.rimdan-wait,.rimdan-modal,.rimdan-page-progress{display:none!important}}
+
+/* Chromium print output: each pad consumes one A4 sheet, with no extra
+   scrollbox height or trailing forced break. Preserve official 18mm writing
+   insets and the original untouched letterhead raster. */
+@media print{
+ @page rimdan-official{size:A4;margin:0}
+ html,body,.app,.main-wrap,main,.editor-grid,.preview-panel,.preview-scroll,#paperViewport{
+  margin:0!important;padding:0!important;box-shadow:none!important;
+  width:auto!important;min-height:0!important;max-height:none!important;
+  height:auto!important;overflow:visible!important;transform:none!important;
+ }
+ .preview-scroll,#paperViewport{display:block!important;position:static!important}
+ #paperViewport{break-inside:auto!important}
+ #paperViewport>.preview-paper{
+  page:rimdan-official!important;box-sizing:border-box!important;
+  width:210mm!important;height:297mm!important;
+  min-height:297mm!important;max-height:297mm!important;
+  margin:0!important;zoom:1!important;overflow:hidden!important;
+  break-inside:avoid!important;break-after:page!important;
+ }
+ #paperViewport>.preview-paper:last-child{break-after:auto!important}
+ #paperViewport>.preview-paper .letterhead-art{
+  position:absolute!important;inset:0!important;width:210mm!important;height:297mm!important;
+  object-fit:contain!important;print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important
+ }
+}
