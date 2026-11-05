@@ -155,6 +155,8 @@ with server(),sync_playwright() as pw:
         assert 30<=sizes[0]<=46 and 30<=sizes[1]<=46,sizes
         phone.locator('[data-new="letter"]').first.click()
         phone.locator('#editTab').click()
+        if not phone.locator('.format-details').evaluate('(el)=>el.open'):
+            phone.locator('.format-details > summary').click()
         assert phone.locator('#fontSize option').count()==44
         phone.locator('#fontSize').select_option('7')
         assert phone.locator('#fontSize').input_value()=='7'
