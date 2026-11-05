@@ -231,8 +231,11 @@ test('only Administrator can remove staff access; sessions are revoked and audit
  assert.equal(removed.status,200);
  assert.equal(removed.data.retainedHistory,true);
  assert.equal((await request('session','GET',null,staffSession)).status,401);
- const accounts=await request('users','GET',null,admin);
- const account=accounts.data.find(a=>a.id===id);
- assert.ok(account);
+ const activeAccounts=await request('users','GET',null,admin);
+ assert.equal(activeAccounts.status,200);
+ assert.ok(!activeAccounts.data.some(a=>a.id===id),'removed account must disappear from active staff');
+ const auditAccounts=await request('users?includeInactive=1','GET',null,admin);
+ const account=auditAccounts.data.find(a=>a.id===id);
+ assert.ok(account,'audit listing preserves removed record');
  assert.equal(account.active,false);
 });
