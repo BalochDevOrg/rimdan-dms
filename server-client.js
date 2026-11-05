@@ -62,7 +62,7 @@ const ServerClient=(()=>{
   if(value.letterhead==='custom')value.customLetterhead=await dataURL(`documents/${d.id}/assets/${value.letterheadAsset}`);
   return value;
  }
- async function open(id){if(!guard())return;try{const d=await hydrate(await api('documents/'+id));DocumentMarks.reset();MobileUX.reset();working={...d,marks:DocumentMarks.clean(d.marks)};docId=d.id;dirty=false;page=staff()?'editor':'reader';render();}catch(e){error(e);}}
+ async function open(id){if(!(await guard()))return;try{const d=await hydrate(await api('documents/'+id));DocumentMarks.reset();MobileUX.reset();working={...d,marks:DocumentMarks.clean(d.marks)};docId=d.id;dirty=false;page=staff()?'editor':'reader';render();}catch(e){error(e);}}
  async function prepare(d){
   const value=structuredClone(d);for(const kind of ['signature','stamp'])if(value.marks?.[kind]){
    const m=value.marks[kind];if(!m.assetId)m.assetId=(await api('assets','POST',{kind,dataUrl:m.src})).id;delete m.src;
@@ -163,6 +163,20 @@ function templatePanel(){return `<details class="panel cloud-panel"><summary>${t
    const payload=await prepare({...d,language:d.language||lang,date:d.date||d.updated?.slice(0,10)||new Date().toISOString().slice(0,10),letterhead:d.letterhead||`official-${d.language||lang}`,marks:DocumentMarks.clean(d.marks),importKey:key});await api('documents','POST',payload);
   }await refresh();render();toast(tr('imported'));
  }catch(e){error(e);}}
+ async function removeFromLibrary(id){
+  if(!staff()||page!=='documents')return;
+  const row=docs.find(d=>d.id===id);if(!row)return;
+  if(!(await confirmChange((lang==='fa'?'سند «':'Delete “')+row.title+(lang==='fa'?'» از پایگاه داده حذف شود؟':'” from the company database?'))))return;
+  try{
+   await api('documents/'+id,'DELETE',{version:row.version});
+   await refresh();render();window.RimdanUI?.success?.(lang==='fa'?'سند حذف شد':'Document deleted');
+  }catch(e){error(e);}
+ }
+ function bindLibraryActions(){
+  document.querySelectorAll('[data-delete]').forEach(button=>{
+   button.onclick=event=>{event.stopPropagation();removeFromLibrary(button.dataset.delete);};
+  });
+ }
  function moreButton(){
   document.getElementById('cloudMore')?.remove();if(nextOffset===null||page!=='documents')return;
   const button=document.createElement('button');button.id='cloudMore';button.className='secondary';button.textContent=lang==='fa'?'نمایش اسناد بیشتر':'Load more documents';button.onclick=()=>search(true);document.getElementById('docList').after(button);
@@ -175,7 +189,7 @@ function templatePanel(){return `<details class="panel cloud-panel"><summary>${t
    const rows=await api('documents?q='+encodeURIComponent(windowSearch())+'&status='+encodeURIComponent(statusFilter)+'&type='+encodeURIComponent(typeFilter)+'&offset='+offset);
    if(generation!==searchVersion||page!=='documents')return;
    docs=append?docs.concat(rows):rows;nextOffset=rows.length===1000?offset+1000:null;
-   document.getElementById('docList').innerHTML=docTable(docs);document.querySelectorAll('[data-open]').forEach(n=>n.onclick=e=>{e.stopPropagation();open(n.dataset.open);});if(typeof bindPreviewButtons==='function')bindPreviewButtons();moreButton();
+   document.getElementById('docList').innerHTML=docTable(docs);document.querySelectorAll('[data-open]').forEach(n=>n.onclick=e=>{e.stopPropagation();open(n.dataset.open);});if(typeof bindPreviewButtons==='function')bindPreviewButtons();bindLibraryActions();moreButton();
   }catch(e){error(e);}},append?0:180);
  }
  function windowSearch(){return document.getElementById('searchInput')?.value||'';}
@@ -183,14 +197,14 @@ function templatePanel(){return `<details class="panel cloud-panel"><summary>${t
   if(!active||!user)return;
   document.documentElement.dataset.role=user.role;
   const nav=document.querySelector('.sidebar nav');let usersNav=nav.querySelector('[data-page=users]');
-  if(user.role==='administrator'&&!usersNav){usersNav=document.createElement('button');usersNav.className='nav';usersNav.dataset.page='users';usersNav.onclick=()=>navigate('users');nav.append(usersNav);}if(usersNav){usersNav.textContent=tr('users');usersNav.hidden=user.role!=='administrator';}
+  if(user.role==='administrator'&&!usersNav){usersNav=document.createElement('button');usersNav.className='nav';usersNav.dataset.page='users';usersNav.onclick=()=>navigate('users');nav.append(usersNav);}if(usersNav){if(!usersNav.querySelector('.nav-text'))usersNav.innerHTML='<span class="nav-icon" aria-hidden="true">♙</span><span class="nav-text"></span>';usersNav.querySelector('.nav-text').textContent=tr('users');usersNav.hidden=user.role!=='administrator';}
   nav.querySelectorAll('[data-page]').forEach(n=>n.hidden=n.dataset.page==='users'?user.role!=='administrator':user.role==='employee'&&n.dataset.page!=='documents');
   document.querySelectorAll('[data-new]').forEach(n=>n.hidden=!staff());
   document.querySelector('.sidebar .user strong').textContent=user.email;document.querySelector('.sidebar .user small').textContent=tr(user.role);
-  const header=document.querySelector('.top-actions');header.querySelector('#cloudLogout')?.remove();const logout=document.createElement('button');logout.className='outline-btn';logout.id='cloudLogout';logout.textContent=tr('logout');logout.onclick=async()=>{if(!guard())return;try{await api('logout','POST',{});clearMemory();authScreen();}catch(e){error(e);}};header.append(logout);
+  const header=document.querySelector('.top-actions');header.querySelector('#cloudLogout')?.remove();const logout=document.createElement('button');logout.className='outline-btn';logout.id='cloudLogout';logout.textContent=tr('logout');logout.onclick=async()=>{if(!(await guard()))return;try{await api('logout','POST',{});clearMemory();authScreen();}catch(e){error(e);}};header.append(logout);
   if(page==='documents'){
-   moreButton();document.getElementById('searchInput').maxLength=200;
-   document.querySelectorAll('button[data-open]').forEach(b=>b.textContent=staff()?t('edit'):tr('read'));
+   moreButton();bindLibraryActions();document.getElementById('searchInput').maxLength=200;
+   document.querySelectorAll('button[data-open]').forEach(b=>{b.title=staff()?t('edit'):tr('read');b.setAttribute('aria-label',b.title);});
    if(staff()){
     const button=document.createElement('button');button.className='secondary';button.textContent=tr('import');button.onclick=importLocal;document.querySelector('.heading').append(button);
    }else document.querySelectorAll('#statusSelect option').forEach(o=>{if(o.value&&o.value!=='finalized')o.remove();});
