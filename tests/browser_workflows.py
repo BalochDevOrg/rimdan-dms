@@ -51,7 +51,7 @@ def fulfill(route):
             if not payload.get('password') or len(payload['password'])<12:raise AssertionError('Expected direct password-based account creation')
             account={'id':'44444444-4444-4444-8444-444444444444','email':payload['email'],'role':payload['role'],'active':True,'has_password':True,'pending':False}
             accounts.append(account);value={'account':account}
-        else:value=accounts
+        else:value=accounts if parse_qs(urlparse(req.url).query).get('includeInactive')==['1'] else [a for a in accounts if a['active']]
     elif path.startswith('/api/v1/users/') and req.method=='DELETE':
         for item in accounts:
             if item['id']==path.split('/')[-1]:item['active']=False
@@ -88,6 +88,16 @@ with server(),sync_playwright() as pw:
         assert page.locator('html').get_attribute('data-theme')=='dark'
         page.locator('.rimdan-theme-toggle').click()
         assert page.locator('html').get_attribute('data-theme')=='light'
+        page.locator('.rimdan-theme-toggle').click()
+        assert page.locator('html').get_attribute('data-theme')=='dark'
+        # Ensure dark-mode table headers and body text remain distinguishable.
+        contrast=page.locator('.document-table th').first.evaluate("""(node)=>{
+          const c=getComputedStyle(node);const row=getComputedStyle(document.querySelector('.document-table tbody tr'));
+          return {fg:c.color,bg:c.backgroundColor,row:row.backgroundColor}
+        }""")
+        assert contrast['bg']!='rgb(248, 250, 251)',contrast
+        assert contrast['fg']!='rgb(255, 255, 255)' or contrast['bg']!='rgb(255, 255, 255)',contrast
+        page.locator('.rimdan-theme-toggle').click()
         page.locator('[data-new="letter"]').first.click()
         assert page.locator('#fontFamily option').count()>=15
         assert page.locator('.format-details').evaluate('(el)=>el.open')
@@ -109,6 +119,10 @@ with server(),sync_playwright() as pw:
         page.locator('.rimdan-modal button.primary').click()
         page.wait_for_timeout(350)
         assert accounts[0]['active'] is False
+        assert page.get_by_text('worker@test.invalid').count()==0
+        page.locator('#toggleRemovedAccounts').click()
+        page.get_by_text('worker@test.invalid').first.wait_for(state='visible',timeout=6000)
+        assert 'inactive' in page.locator('.rimdan-staff-row').filter(has_text='worker@test.invalid').inner_text().lower()
         assert page.locator('.rimdan-completion').count()>=1
         assert not errors,errors
         print('PASS: search, storage badges, theme switch, selective formatting, staff create/remove, branded dialogs')
