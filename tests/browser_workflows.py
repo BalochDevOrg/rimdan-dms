@@ -37,7 +37,7 @@ def fulfill(route):
     req=route.request
     path=urlparse(req.url).path
     payload={}
-    if req.method=='POST':
+    if req.method in ('POST','PATCH','DELETE'):
         try:payload=req.post_data_json or {}
         except Exception:pass
     if path.endswith('/config'):value={'mode':'server'}
@@ -52,6 +52,14 @@ def fulfill(route):
             account={'id':'44444444-4444-4444-8444-444444444444','email':payload['email'],'role':payload['role'],'active':True,'has_password':True,'pending':False}
             accounts.append(account);value={'account':account}
         else:value=accounts
+    elif path.startswith('/api/v1/users/') and req.method=='DELETE':
+        for item in accounts:
+            if item['id']==path.split('/')[-1]:item['active']=False
+        value={'removed':True,'retainedHistory':True}
+    elif path.startswith('/api/v1/documents/') and req.method=='DELETE':
+        ident=path.split('/')[-1]
+        docs[:]=[d for d in docs if d['id']!=ident]
+        value={'ok':True}
     elif path.endswith('/documents'):
         query=parse_qs(urlparse(req.url).query).get('q',[''])[0].lower()
         value=[x for x in docs if query in (x['title']+' '+x['number']+' '+x['recipient']).lower()]
@@ -74,10 +82,22 @@ with server(),sync_playwright() as pw:
         page.locator('#rimdanClearSearch').click()
         page.wait_for_timeout(400)
         assert 'Test invoice' in page.locator('#docList').inner_text()
+        assert page.locator('[data-delete]').count()>=1
+        assert page.locator('.rimdan-location').first.inner_text().strip()
+        page.locator('.rimdan-theme-toggle').click()
+        assert page.locator('html').get_attribute('data-theme')=='dark'
+        page.locator('.rimdan-theme-toggle').click()
+        assert page.locator('html').get_attribute('data-theme')=='light'
         page.locator('[data-new="letter"]').first.click()
         assert page.locator('#fontFamily option').count()>=15
         assert page.locator('.format-details').evaluate('(el)=>el.open')
+        page.locator('#docBody').fill('First sentence. Second sentence.')
+        page.locator('#docBody').evaluate('(el)=>{el.setSelectionRange(0,5);el.focus();}')
+        page.locator('[data-format="bold"]').click()
+        assert page.locator('#pvBody strong').first.inner_text()=='First'
+        assert '**' not in page.locator('#pvBody').inner_text()
         page.locator('[data-page="users"]').click()
+        page.locator('.rimdan-modal button.primary').click()
         page.locator('#staffPassword').wait_for(state='visible')
         page.locator('#staffGenerate').click()
         assert len(page.locator('#staffPassword').input_value())>=20
@@ -85,6 +105,11 @@ with server(),sync_playwright() as pw:
         page.locator('#accountForm button[type="submit"]').click()
         page.get_by_text('worker@test.invalid').first.wait_for(state='visible',timeout=8000)
         assert len(accounts)==1 and accounts[0]['has_password']
+        page.locator('[data-remove-user]').first.click()
+        page.locator('.rimdan-modal button.primary').click()
+        page.wait_for_timeout(350)
+        assert accounts[0]['active'] is False
+        assert page.locator('.rimdan-completion').count()>=1
         assert not errors,errors
-        print('PASS: document search, clear, visible editor font controls, direct staff creation')
+        print('PASS: search, storage badges, theme switch, selective formatting, staff create/remove, branded dialogs')
     finally:browser.close()
