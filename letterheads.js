@@ -39,57 +39,58 @@ const Letterheads = (() => {
   // Measure with the browser's actual typography, then split at word boundaries.
   // All pages keep the same artwork and writing rectangle; no text enters footer.
   function paginate() {
-    const first = document.getElementById('paper');
-    const viewport = document.getElementById('paperViewport');
-    viewport.querySelectorAll('.continuation-paper').forEach(p => p.remove());
-    const firstBody = document.getElementById('pvBody');
-    const original = working.body || '';
-    const probe = document.createElement('div');
-    probe.className = 'pagination-probe';
-    // Use unscaled CSS dimensions: preview zoom must never change pagination.
-    const style = getComputedStyle(firstBody);
-    for (const key of ['fontFamily','fontSize','fontWeight','fontStyle','textDecoration','textAlign','lineHeight','letterSpacing','wordSpacing']) probe.style[key] = style[key];
-    probe.style.width = firstBody.clientWidth + 'px';
-    probe.dir = first.dir; probe.lang = first.lang;
+    const first=document.getElementById('paper'),viewport=document.getElementById('paperViewport');
+    if(!first||!viewport)return;
+    viewport.querySelectorAll('.continuation-paper').forEach(node=>node.remove());
+    const body=document.getElementById('pvBody');
+    const runs=InlineText.parse(working.body||'');
+    const visible=InlineText.plain(runs);
+    const total=InlineText.length(runs);
+    const probe=document.createElement('div');
+    probe.className='pagination-probe';
+    const style=getComputedStyle(body);
+    for(const key of ['fontFamily','fontSize','fontWeight','fontStyle','textDecoration','textAlign','lineHeight','letterSpacing','wordSpacing','whiteSpace'])probe.style[key]=style[key];
+    probe.style.width=body.clientWidth+'px';probe.dir=first.dir;probe.lang=first.lang;
     document.body.append(probe);
-    const capacity = firstBody.clientHeight;
-    const fits = value => { probe.textContent = value; return probe.scrollHeight <= capacity + 1; };
-    let remaining = original, page = first, count = 1;
-    while (remaining) {
-      let end = remaining.length;
-      if (!fits(remaining)) {
-        let low = 0, high = remaining.length;
-        while (low < high) {
-          const mid = Math.ceil((low+high)/2);
-          if (fits(remaining.slice(0,mid))) low = mid; else high = mid-1;
+    const capacity=body.clientHeight;
+    const fits=(start,end)=>{
+      InlineText.render(probe,InlineText.segment(runs,start,end));
+      return probe.scrollHeight<=capacity+1;
+    };
+    let start=0,page=first,count=1;
+    while(start<total){
+      let end=total;
+      if(!fits(start,total)){
+        let low=start+1,high=total;
+        while(low<high){
+          const middle=Math.ceil((low+high)/2);
+          if(fits(start,middle))low=middle;else high=middle-1;
         }
-        end = Math.max(1,low);
-        const boundary = Math.max(remaining.lastIndexOf(' ',end-1),remaining.lastIndexOf('\n',end-1));
-        if (boundary > end/2) end = boundary+1;
-        // Never split a UTF-16 surrogate pair.
-        if (end < remaining.length && /[\uD800-\uDBFF]/.test(remaining[end-1])) end = end===1 ? 2 : end-1;
+        end=Math.max(start+1,low);
+        const blank=Math.max(visible.lastIndexOf(' ',end-1),visible.lastIndexOf('\n',end-1));
+        if(blank>start+(end-start)/2)end=blank+1;
+        if(end<total && /[\uD800-\uDBFF]/.test(visible[end-1]))end=end===start+1?end+1:end-1;
       }
-      page.querySelector('.paper-body').textContent = remaining.slice(0,end);
-      remaining = remaining.slice(end);
-      if (!remaining) break;
-      const next = first.cloneNode(true);
+      InlineText.render(page.querySelector('.paper-body'),InlineText.segment(runs,start,end));
+      start=end;
+      if(start>=total)break;
+      const next=first.cloneNode(true);
       next.classList.add('continuation-paper');
       next.querySelector('.document-marks')?.remove();
       next.removeAttribute('id');
-      next.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
-      next.querySelector('.paper-body').textContent = '';
-      viewport.append(next); page = next; count++;
+      next.querySelectorAll('[id]').forEach(node=>node.removeAttribute('id'));
+      next.querySelector('.paper-body').replaceChildren();
+      viewport.append(next);
+      page=next;count++;
     }
-    if (!original) firstBody.textContent = '';
+    if(total===0)body.replaceChildren();
     probe.remove();
-    const fields = ['pvTitle','pvRecipient','letterDate','pvNumber'].some(id => {
-      const node = document.getElementById(id);
-      return node.scrollHeight > node.clientHeight+1 || node.scrollWidth > node.clientWidth+1;
+    const fields=['pvTitle','pvRecipient','letterDate','pvNumber'].some(id=>{
+      const node=document.getElementById(id);
+      return node.scrollHeight>node.clientHeight+1||node.scrollWidth>node.clientWidth+1;
     });
-    document.getElementById('letterheadStatus').textContent = fields ? text('fields') : '';
-    const notice = document.getElementById('overflowNotice');
-    notice.hidden = count === 1;
-    notice.textContent = text('pages');
+    document.getElementById('letterheadStatus').textContent=fields?text('fields'):'';
+    const notice=document.getElementById('overflowNotice');notice.hidden=count===1;notice.textContent=text('pages');
     fitPages();
   }
   function fitPages() {
