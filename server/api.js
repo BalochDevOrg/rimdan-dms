@@ -114,6 +114,15 @@ export default async function handler(req,res){
      const secret=token();await c.query("INSERT INTO invitations(account_id,token_hash,expires_at,created_by) VALUES($1,$2,now()+interval '24 hours',$3)",[account.id,digest(secret),user.id]);
      return {account,invitationURL:config.origin+'/#invite='+secret};
     }
+    if(parts.length===2&&uuid(parts[1])&&method==='DELETE'){
+     // Revoke access rather than physically delete historical document ownership,
+     // auditing references, or security records.
+     if(parts[1]===user.id)fail(403,'Administrator cannot remove own account');
+     const {rows:[account]}=await c.query("UPDATE accounts SET active=false WHERE id=$1 AND role IN ('manager','employee') RETURNING id,role,active",[parts[1]]);
+     if(!account)fail(404,'Account unavailable');
+     await c.query('UPDATE invitations SET used_at=now() WHERE account_id=$1 AND used_at IS NULL',[parts[1]]);
+     return {removed:true,retainedHistory:true};
+    }
     if(parts.length===2&&uuid(parts[1])&&method==='PATCH'){
      if(parts[1]===user.id)fail(403,'Cannot modify your own role or activity');
      const {rows:[old]}=await c.query('SELECT role,active FROM accounts WHERE id=$1',[parts[1]]);if(!old||old.role==='administrator')fail(404,'Account unavailable');
