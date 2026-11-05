@@ -107,8 +107,8 @@
    button.setAttribute('aria-pressed',String(selected==='dark'));
    button.setAttribute('aria-label',selected==='dark'?'Switch to light theme':'Switch to dark theme');
    button.title=selected==='dark'?'Light mode':'Dark mode';
-   const icon=button.querySelector('.rimdan-theme-glyph');if(icon)icon.textContent=selected==='dark'?'☀':'☾';
-   const text=button.querySelector('.rimdan-theme-label');if(text)text.textContent=selected==='dark'?(document.documentElement.lang==='fa'?'حالت روشن':'Light theme'):(document.documentElement.lang==='fa'?'حالت تیره':'Dark theme');
+   const icon=button.querySelector('.rimdan-theme-glyph');if(icon){const desired=selected==='dark'?'☀':'☾';if(icon.textContent!==desired)icon.textContent=desired;}
+   const text=button.querySelector('.rimdan-theme-label');if(text){const desired=selected==='dark'?(document.documentElement.lang==='fa'?'حالت روشن':'Light theme'):(document.documentElement.lang==='fa'?'حالت تیره':'Dark theme');if(text.textContent!==desired)text.textContent=desired;}
   }
  }
  let preferredTheme='light';try{preferredTheme=localStorage.getItem('rimdan_theme')||'light';}catch{}
