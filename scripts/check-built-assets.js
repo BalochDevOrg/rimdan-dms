@@ -10,7 +10,7 @@ for(const path of references){
  if(path.includes('..')||path.startsWith('/'))throw Error('Unexpected root or traversal asset: '+path);
  await access(join('public',path));
 }
-for(const path of ['ux-premium.css','ux-premium.js']){
+for(const path of ['ux-premium.css','ux-premium.js','ui-icons.js','ux-compact.css']){
  if(!references.includes(path))throw Error('Phase 3 asset is not referenced: '+path);
  await access(join('public',path));
 }
