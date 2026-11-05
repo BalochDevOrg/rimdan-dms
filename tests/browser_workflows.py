@@ -122,7 +122,8 @@ with server(),sync_playwright() as pw:
         assert page.get_by_text('worker@test.invalid').count()==0
         page.locator('#toggleRemovedAccounts').click()
         page.get_by_text('worker@test.invalid').first.wait_for(state='visible',timeout=6000)
-        assert 'inactive' in page.locator('.rimdan-staff-row').filter(has_text='worker@test.invalid').inner_text().lower()
+        removed_row=page.locator('.rimdan-staff-row').filter(has_text='worker@test.invalid').inner_text().lower()
+        assert any(word in removed_row for word in ('inactive','غیرفعال','حذف‌شده')),removed_row
         assert page.locator('.rimdan-completion').count()>=1
         assert not errors,errors
         print('PASS: search, storage badges, theme switch, selective formatting, staff create/remove, branded dialogs')
