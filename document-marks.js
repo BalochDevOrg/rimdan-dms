@@ -63,7 +63,7 @@ const DocumentMarks = (() => {
 
   function panel() {
     return `<details class="mark-tools"><summary>${text('tools')}</summary>
-      <p class="mark-privacy">${text('privacy')}</p><p>${text('firstPage')}</p>
+      <p class="mark-privacy">${ServerClient.active?(lang==='fa'?'تصاویر انتخاب‌شده تا زمان ذخیره سند فقط پیش‌نمایش هستند. پس از تأیید ذخیره، تصاویر سند در پایگاه داده خصوصی شرکت نگهداری می‌شوند.':'Selected images are previews until the document is saved. After the database confirms saving, document assets are stored privately for authorized company access.'):text('privacy')}</p><p>${text('firstPage')}</p>
       ${kinds.map(kind => `<section class="mark-tool" aria-labelledby="${kind}-heading">
         <h3 id="${kind}-heading">${text(kind)}</h3>
         <label for="${kind}-file">${text('upload')}</label>
