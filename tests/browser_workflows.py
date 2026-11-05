@@ -101,6 +101,17 @@ with server(),sync_playwright() as pw:
         page.locator('[data-new="letter"]').first.click()
         assert page.locator('#fontFamily option').count()>=15
         assert page.locator('.format-details').evaluate('(el)=>el.open')
+        assert page.locator('#fontSize option').count()==44
+        page.locator('#fontSize').select_option('50')
+        assert page.locator('#pvBody').evaluate("(el)=>Math.round(parseFloat(getComputedStyle(el).fontSize))")>=60
+        page.locator('#fontSize').select_option('12')
+        page.locator('#titleSize').select_option('20')
+        page.locator('#recipientSize').select_option('16')
+        assert page.locator('#pvTitle').evaluate("(el)=>getComputedStyle(el).fontSize")=='26.6667px'
+        assert page.locator('#pvRecipient').evaluate("(el)=>parseFloat(getComputedStyle(el).fontSize)")>20
+        assert page.locator('#saveBtn .rimdan-svg').count()==1
+        assert page.locator('#pdfBtn .rimdan-svg').count()==1
+
         page.locator('#docBody').fill('First sentence. Second sentence.')
         page.locator('#docBody').evaluate('(el)=>{el.setSelectionRange(0,5);el.focus();}')
         page.locator('[data-format="bold"]').click()
@@ -126,5 +137,30 @@ with server(),sync_playwright() as pw:
         assert any(word in removed_row for word in ('inactive','غیرفعال','حذف‌شده')),removed_row
         assert page.locator('.rimdan-completion').count()>=1
         assert not errors,errors
-        print('PASS: search, storage badges, theme switch, selective formatting, staff create/remove, branded dialogs')
+        # Mobile editor, document library, navigation stacking, and compact actions.
+        phone=browser.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True)
+        phone.route('**/api/v1/**',fulfill)
+        phone.goto(BASE,wait_until='domcontentloaded',timeout=15000)
+        phone.locator('#searchInput').wait_for(state='visible',timeout=10000)
+        phone.locator('#menuBtn').click()
+        phone.locator('#sidebar.open').wait_for(state='visible')
+        layers=phone.evaluate("""() => {let s=document.querySelector('#sidebar'),b=document.querySelector('#navBackdrop'),r=s.getBoundingClientRect();
+          return {sidebar:getComputedStyle(s).zIndex,backdrop:getComputedStyle(b).zIndex,hit:document.elementFromPoint(r.left+50,r.top+250)?.closest('#sidebar')===s};
+        }""")
+        assert int(layers['sidebar'])>int(layers['backdrop']) and layers['hit'],layers
+        phone.locator('#closeNav').click()
+        assert not phone.locator('#sidebar').evaluate("(el)=>el.classList.contains('open')")
+        phone.locator('#docList .rimdan-icon-action').first.wait_for(state='visible')
+        sizes=phone.locator('#docList .rimdan-icon-action').first.evaluate("(el)=>{let r=el.getBoundingClientRect();return [r.width,r.height]}")
+        assert 30<=sizes[0]<=46 and 30<=sizes[1]<=46,sizes
+        phone.locator('[data-new="letter"]').first.click()
+        phone.locator('#editTab').click()
+        assert phone.locator('#fontSize option').count()==44
+        phone.locator('#fontSize').select_option('7')
+        assert phone.locator('#fontSize').input_value()=='7'
+        phone.locator('#previewTab').click()
+        phone.locator('#zoomIn .rimdan-svg').wait_for(state='visible')
+        assert phone.locator('#saveBtn').is_visible()
+        phone.close()
+        print('PASS: search, formatting 7-50 pt, mobile drawer and compact actions, staff workflows')
     finally:browser.close()
