@@ -52,6 +52,28 @@ with server(),sync_playwright() as pw:
                 assert page.locator('html').get_attribute('lang')=='fa'
             assert not errors,errors
             page.close()
-        print('PASS: live DOM startup and login screen responsive in Persian and English')
+        # UI-only mobile navigation smoke: signed-in visual state is simulated.
+        # No auth endpoint is bypassed or used for real data.
+        mobile=browser.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True)
+        mobile.route('**/api/v1/config',lambda route:route.fulfill(status=200,content_type='application/json',body='{"mode":"server"}'))
+        mobile.route('**/api/v1/session',lambda route:route.fulfill(status=401,content_type='application/json',body='{"error":"Unauthorized"}'))
+        mobile.goto(BASE,wait_until='domcontentloaded',timeout=15000)
+        mobile.locator('#authForm').wait_for(state='visible',timeout=8000)
+        mobile.evaluate("() => { document.documentElement.dataset.auth='signed-in'; }")
+        mobile.locator('#menuBtn').click(timeout=5000)
+        assert mobile.locator('#sidebar').evaluate("(el)=>el.classList.contains('open')")
+        assert mobile.locator('#navBackdrop').is_visible()
+        info=mobile.evaluate("""() => {
+          const s=document.querySelector('#sidebar'),b=document.querySelector('#navBackdrop');
+          const r=s.getBoundingClientRect();
+          const x=r.left+Math.min(60,r.width/2), y=r.top+Math.min(210,r.height/2);
+          return {sideZ:Number(getComputedStyle(s).zIndex),backZ:Number(getComputedStyle(b).zIndex),
+                  hit:document.elementFromPoint(x,y)?.closest('#sidebar')===s, width:r.width};
+        }""")
+        assert info['sideZ']>info['backZ'] and info['hit'],info
+        mobile.locator('#closeNav').click(timeout=5000)
+        assert not mobile.locator('#sidebar').evaluate("(el)=>el.classList.contains('open')")
+        mobile.close()
+        print('PASS: bilingual login responsive and mobile drawer interactive above backdrop')
     finally:
         browser.close()
