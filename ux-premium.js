@@ -35,24 +35,30 @@
   updateCollapse();
  });
  updateCollapse();
- let pending=0,timer=null,progress,waiting;
- function clearProgress(){progress?.remove();progress=null;waiting?.remove();waiting=null;}
+ let pending=0,timer=null,hideTimer=null,progress,waiting,shownAt=0;
+ function clearProgress(){progress?.remove();progress=null;waiting?.remove();waiting=null;shownAt=0;}
  function showProgress(){
   if(pending<1)return;
   if(!progress){progress=document.createElement('div');progress.className='rimdan-page-progress';progress.setAttribute('role','progressbar');progress.setAttribute('aria-label',tr('busy'));document.body.append(progress);}
   if(!waiting){
-   waiting=document.createElement('div');waiting.className='rimdan-wait';waiting.setAttribute('role','status');waiting.setAttribute('aria-live','polite');
+   shownAt=Date.now();waiting=document.createElement('div');waiting.className='rimdan-wait';waiting.setAttribute('role','status');waiting.setAttribute('aria-live','polite');
    const spinner=document.createElement('span');spinner.className='rimdan-spinner';spinner.setAttribute('aria-hidden','true');
    const label=document.createElement('span');label.textContent=document.documentElement.lang==='fa'?'در حال دریافت اطلاعات…':'Working on your request…';
    waiting.append(spinner,label);document.body.append(waiting);
   }
  }
  function trackRequest(request){
+  clearTimeout(hideTimer);
   pending++;
-  if(pending===1)timer=setTimeout(()=>{if(pending)showProgress()},250);
+  if(pending===1)timer=setTimeout(()=>{if(pending)showProgress()},320);
   return Promise.resolve(request).finally(()=>{
    pending=Math.max(0,pending-1);
-   if(!pending){clearTimeout(timer);clearProgress();}
+   if(!pending){
+    clearTimeout(timer);
+    // Retain the indicator across sequential API requests. When it appears,
+    // keep it on screen long enough to avoid one-frame flashes.
+    hideTimer=setTimeout(()=>{if(!pending)clearProgress();},Math.max(380,shownAt?660-(Date.now()-shownAt):380));
+   }
   });
  }
  const originalFetch=window.fetch.bind(window);
@@ -78,7 +84,55 @@
    try{dialog.showModal();}catch{dialog.remove();resolve(window.confirm(message));}
   });
  }
- window.RimdanUI=Object.freeze({confirm:confirmAction});
+ let noticeTimer=null;
+ function notify(message,{kind='info',timeout=3800}={}){
+  const old=document.getElementById('rimdan-completion');if(old)old.remove();
+  clearTimeout(noticeTimer);
+  const notice=document.createElement('div');notice.id='rimdan-completion';notice.className='rimdan-completion '+kind;
+  notice.setAttribute('role',kind==='error'?'alert':'status');
+  const badge=document.createElement('span');badge.className='rimdan-completion-symbol';badge.setAttribute('aria-hidden','true');
+  badge.textContent=kind==='success'?'✓':kind==='error'?'!':'i';
+  const text=document.createElement('span');text.textContent=String(message);text.className='rimdan-completion-text';
+  const close=document.createElement('button');close.type='button';close.textContent='×';close.setAttribute('aria-label',document.documentElement.lang==='fa'?'بستن':'Close notification');
+  close.onclick=()=>{clearTimeout(noticeTimer);notice.remove();};
+  notice.append(badge,text,close);document.body.append(notice);
+  if(timeout>0)noticeTimer=setTimeout(()=>notice.remove(),timeout);
+  return true;
+ }
+ function setTheme(theme){
+  const selected=theme==='dark'?'dark':'light';
+  root.dataset.theme=selected;
+  try{localStorage.setItem('rimdan_theme',selected);}catch{}
+  for(const button of document.querySelectorAll('[data-rimdan-theme]')){
+   button.setAttribute('aria-pressed',String(selected==='dark'));
+   button.setAttribute('aria-label',selected==='dark'?'Switch to light theme':'Switch to dark theme');
+   button.title=selected==='dark'?'Light mode':'Dark mode';
+   const icon=button.querySelector('.rimdan-theme-glyph');if(icon)icon.textContent=selected==='dark'?'☀':'☾';
+   const text=button.querySelector('.rimdan-theme-label');if(text)text.textContent=selected==='dark'?(document.documentElement.lang==='fa'?'حالت روشن':'Light theme'):(document.documentElement.lang==='fa'?'حالت تیره':'Dark theme');
+  }
+ }
+ let preferredTheme='light';try{preferredTheme=localStorage.getItem('rimdan_theme')||'light';}catch{}
+ setTheme(preferredTheme);
+ function createThemeButton(labelled=false){
+  const button=document.createElement('button');button.type='button';
+  button.className=labelled?'secondary rimdan-theme-setting':'outline-btn rimdan-theme-toggle';
+  button.dataset.rimdanTheme='true';button.innerHTML='<span class="rimdan-theme-glyph" aria-hidden="true">☾</span>'+(labelled?'<span class="rimdan-theme-label"></span>':'');
+  button.onclick=()=>setTheme(root.dataset.theme==='dark'?'light':'dark');
+  return button;
+ }
+ function decorateTheme(){
+  const header=$('.top-actions');
+  if(header&&!header.querySelector('.rimdan-theme-toggle'))header.insertBefore(createThemeButton(),header.querySelector('#langBtn'));
+  const settings=$('#view .settings-grid');
+  if(settings&&!settings.querySelector('.rimdan-theme-setting')){
+   const card=document.createElement('section');card.className='panel rimdan-theme-panel';
+   const h=document.createElement('h2');h.textContent=document.documentElement.lang==='fa'?'ظاهر برنامه':'Appearance';
+   const p=document.createElement('p');p.textContent=document.documentElement.lang==='fa'?'نمای روشن یا تیره را انتخاب کنید. فقط رابط کاربری تغییر می‌کند، نه سربرگ چاپی.':'Switch the interface between light and dark. Printed letters remain unchanged.';
+   card.append(h,p,createThemeButton(true));settings.append(card);
+  }
+  setTheme(root.dataset.theme);
+ }
+ window.RimdanUI=Object.freeze({confirm:confirmAction,notify,success:message=>notify(message,{kind:'success',timeout:4200}),setTheme});
  function decorate(){
   const navigation=$('#sidebar nav');
   if(navigation){
@@ -94,7 +148,7 @@
     else{btn.title=tr(page);btn.setAttribute('aria-label',tr(page));}
    });
   }
-  updateCollapse();
+  updateCollapse();decorateTheme();
   if($('#searchInput')&&!$('#rimdanSearchAction')){
    const search=$('#searchInput'),bar=search.closest('.toolbar');
    if(bar){
