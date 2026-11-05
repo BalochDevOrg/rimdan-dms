@@ -14,7 +14,7 @@ const ServerClient=(()=>{
    if(response.status===401&&user){if(dirty&&working&&staff())recovery={accountId:user.id,source:working,draft:structuredClone(working)};clearMemory(false);authScreen();}throw e;}
   return response.json();
  }
- function error(e){if(e.status===401&&user){if(dirty&&working&&staff())recovery={accountId:user.id,source:working,draft:structuredClone(working)};clearMemory(false);authScreen();}loadError=e.status===401?tr(e.path==='login'?'credentials':'expired'):e.status===403?tr('denied'):e.status===409?(lang==='fa'?'نسخه سند تغییر کرده است؛ پیش از ذخیره دوباره بارگیری کنید.':'Document revision changed. Reopen before saving or printing.'):e.status===503?tr('unavailable'):tr('failed');if(/^[a-f0-9-]{36}$/i.test(e.requestId||''))loadError+=' · '+(lang==='fa'?'شناسه پیگیری: ':'Reference: ')+e.requestId;if(page==='editor')toast(loadError);else{const node=document.getElementById('cloudError');if(node)node.textContent=loadError;else toast(loadError);}}
+ function error(e){if(e.status===401&&user){if(dirty&&working&&staff())recovery={accountId:user.id,source:working,draft:structuredClone(working)};clearMemory(false);authScreen();}loadError=e.status===401?tr(e.path==='login'?'credentials':'expired'):e.status===403?tr('denied'):e.status===409?(lang==='fa'?'نسخه سند تغییر کرده است؛ پیش از ذخیره دوباره بارگیری کنید.':'Document revision changed. Reopen before saving or printing.'):e.status===503?tr('unavailable'):tr('failed');if(/^[a-f0-9-]{36}$/i.test(e.requestId||''))loadError+=' · '+(lang==='fa'?'شناسه پیگیری: ':'Reference: ')+e.requestId;if(page==='editor'){window.RimdanUI?.notify?.(loadError,{kind:'error',timeout:6500})||toast(loadError);}else{const node=document.getElementById('cloudError');if(node)node.textContent=loadError;else toast(loadError);}}
  function clearMemory(clearRecovery=true){if(clearRecovery)recovery=null;user=null;csrf='';docs=[];working=null;docId=null;dirty=false;templates=[];users=[];shareTargets=[];features={phase3:false};letterheadImage='';DocumentMarks.reset();MobileUX.reset();document.documentElement.dataset.role='';}
  async function refresh(){docs=await api('documents');nextOffset=docs.length===1000?1000:null;stats=await api('summary');templates=staff()?await api('templates'):[];users=user.role==='administrator'?await api('users'):[];features=await api('capabilities');shareTargets=staff()&&features.phase3?await api('share-targets'):[];}
  function authScreen(){
@@ -113,7 +113,7 @@ const ServerClient=(()=>{
    else{retainSavedIdentity(working,snapshot,saved);dirty=true;}
    docId=saved.id;const visible=working;
    await refresh();if(working!==visible||page!=='editor')return;
-   renderEditorPreservingFocus();setBusy(true);toast(dirty?tr('newerEdits'):t('saved'));
+   renderEditorPreservingFocus();setBusy(true);if(dirty)window.RimdanUI?.notify?.(tr('newerEdits'),{kind:'info'});else window.RimdanUI?.success?.(lang==='fa'?'✓ سند در پایگاه داده شرکت ذخیره شد':'Document saved to company database');
   }catch(e){
    failed=true;
    if(working===source&&acknowledged){retainSavedIdentity(source,snapshot,acknowledged);docId=acknowledged.id;dirty=true;}
@@ -254,6 +254,7 @@ function templatePanel(){return `<details class="panel cloud-panel"><summary>${t
     try{await api('users','POST',{email,password:form.elements.password.value,role:form.elements.role.value});
      form.elements.password.value='';await refresh();render();
      document.getElementById('invitationOutput').textContent=(lang==='fa'?'حساب '+email+' ایجاد شد. گذرواژه را امن به کارمند برسانید.':'Created '+email+'. Share the password securely.');
+     window.RimdanUI?.success?.(lang==='fa'?'حساب کارمند ساخته شد':'Staff account created');
     }catch(err){error(err);}finally{if(btn.isConnected){btn.disabled=false;btn.classList.remove('rimdan-busy');}}
    };
    document.querySelectorAll('[data-account-edit]').forEach(n=>n.onclick=()=>{
