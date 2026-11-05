@@ -8,7 +8,7 @@ button.primary,button.secondary,.outline-btn{min-height:38px;padding:7px 12px;li
 button.primary .rimdan-svg,button.secondary .rimdan-svg{width:16px;height:16px}
 .rimdan-icon-action{width:34px;height:34px;padding:6px!important;margin:0!important;box-shadow:none;min-width:34px}
 .rimdan-icon-action svg{width:16px;height:16px}
-.rimdan-location{display:inline-flex;align-items:center;font-weight:600;font-size:10px;padding:4px 7px;border-radius:7px;margin:0}
+.rimdan-location{display:inline-flex;align-items:center;gap:5px;font-weight:600;font-size:10px;padding:4px 7px;border-radius:7px;margin:0}.rimdan-location .rimdan-svg{width:13px;height:13px}
 .document-table td:last-child{white-space:nowrap}
 .document-table td:last-child .rimdan-icon-action{vertical-align:middle}
 .rimdan-search-actions button{min-width:38px!important;min-height:38px!important;height:38px;padding:7px!important;display:grid;place-items:center}
@@ -143,3 +143,6 @@ body>.rimdan-wait{z-index:240!important;border-radius:11px!important;padding:13p
 @media print{
  body:has(>.rimdan-wait)::after,.rimdan-heading-styles,.rimdan-labelled-action .rimdan-svg{display:none!important}
 }
+
+.rimdan-danger-action{border-color:#e2c7c2!important;color:#a04739!important;background:#fff8f7!important}
+.rimdan-danger-action:hover{background:#fff0ec!important;border-color:#bd7163!important}
