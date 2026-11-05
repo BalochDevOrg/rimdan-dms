@@ -104,7 +104,10 @@ export default async function handler(req,res){
    if(path==='summary'&&method==='GET')return (await c.query("SELECT count(*)::int AS total,count(*) FILTER(WHERE status='draft')::int AS draft,count(*) FILTER(WHERE status='finalized')::int AS finalized,count(*) FILTER(WHERE status='archived')::int AS archived FROM documents")).rows[0];
    if(parts[0]==='users'){
     admin(user);
-    if(parts.length===1&&method==='GET')return (await c.query(`SELECT ${accountColumns},EXISTS(SELECT 1 FROM invitations i WHERE i.account_id=accounts.id AND i.used_at IS NULL) AS pending FROM accounts ORDER BY created_at`)).rows;
+    if(parts.length===1&&method==='GET'){
+     const includeInactive=url.searchParams.get('includeInactive')==='1';
+     return (await c.query(`SELECT ${accountColumns},EXISTS(SELECT 1 FROM invitations i WHERE i.account_id=accounts.id AND i.used_at IS NULL) AS pending FROM accounts WHERE active=true OR $1::boolean ORDER BY active DESC,created_at`,[includeInactive])).rows;
+    }
     if(parts.length===1&&method==='POST'){
      const email=text(payload.email,254).trim().toLowerCase(),role=payload.role;
      if(!/^\S+@\S+\.\S+$/.test(email)||!['manager','employee'].includes(role))fail(400,'Invalid email or role');
