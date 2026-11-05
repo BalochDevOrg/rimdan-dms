@@ -215,3 +215,24 @@ test('Phase 3 manual one-time password reset revokes sessions and rejects replay
  assert.equal((await request('login','POST',{email:'employee@test.invalid',password})).status,401);
  assert.equal((await request('login','POST',{email:'employee@test.invalid',password:updated})).status,200);
 });
+
+test('only Administrator can remove staff access; sessions are revoked and audit history retained',async()=>{
+ const email='remove-staff@test.invalid';
+ const created=await request('users','POST',{email,role:'employee',password},admin);
+ assert.equal(created.status,200);
+ const id=created.data.account.id;
+ const staffSession=await login(email);
+ assert.equal((await request('users','GET',null,staffSession)).status,403);
+ assert.equal((await request('users','GET',null,await login('manager@test.invalid'))).status,403);
+ assert.equal((await request('users/'+id,'DELETE',{},staffSession)).status,403);
+ assert.equal((await request('users/'+id,'DELETE',{},await login('manager@test.invalid'))).status,403);
+ assert.equal((await request('users/'+admin.user.id,'DELETE',{},admin)).status,403);
+ const removed=await request('users/'+id,'DELETE',{},admin);
+ assert.equal(removed.status,200);
+ assert.equal(removed.data.retainedHistory,true);
+ assert.equal((await request('session','GET',null,staffSession)).status,401);
+ const accounts=await request('users','GET',null,admin);
+ const account=accounts.data.find(a=>a.id===id);
+ assert.ok(account);
+ assert.equal(account.active,false);
+});
