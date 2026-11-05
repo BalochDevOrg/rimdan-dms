@@ -301,3 +301,107 @@ button.secondary:hover:not(:disabled),.secondary:hover:not(:disabled),.rimdan-se
   object-fit:contain!important;print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important
  }
 }
+
+/* Final interaction pass: upload controls, compact document actions, completion modal. */
+input[type="file"]{
+ display:block;width:100%;max-width:100%;min-height:52px;box-sizing:border-box;
+ background:linear-gradient(120deg,#fffef9,#f9f0df);
+ border:1px solid #d8bc81;border-radius:12px;padding:8px;
+ color:#614b27;font-size:12px;cursor:pointer;
+}
+input[type="file"]::file-selector-button{
+ border:1px solid #b4863d;background:var(--rimdan-gold-gradient);
+ border-radius:9px;color:#233341;font-weight:750;
+ padding:9px 16px;margin-inline-end:13px;cursor:pointer;
+ box-shadow:0 2px 7px #b88b322a;transition:filter .15s ease;
+}
+input[type="file"]:hover::file-selector-button{filter:brightness(1.07)}
+input[type="file"]:focus-visible{outline:3px solid #d6a84f99;outline-offset:3px}
+.rimdan-icon-action{
+ display:inline-grid;place-items:center;vertical-align:middle;
+ width:38px;height:38px;padding:7px!important;margin-inline:2px;
+ border:1px solid #d8c49d;border-radius:10px;
+ background:linear-gradient(155deg,#fffdf9,#fbf1dc);
+ color:#7b581d;cursor:pointer;box-shadow:0 1px 3px #7c56201e;
+}
+.rimdan-icon-action svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.rimdan-icon-action:hover{border-color:#b18532;background:#f9e6bd;transform:translateY(-1px)}
+.rimdan-icon-action.danger{color:#9a3e3e;border-color:#e4baba;background:#fff9f8}
+.rimdan-icon-action.danger:hover{background:#ffebeb;border-color:#bc5858}
+.rimdan-location{font-size:10px;white-space:nowrap;color:#456f5b;background:#eaf6ef;padding:5px 7px;border:1px solid #c5e4d2;border-radius:8px;margin-inline-end:7px}
+.rimdan-inline-hint{background:#fff7e4;border-inline-start:3px solid #bb8d35;padding:9px 12px;border-radius:7px;font-size:12px;line-height:1.8;color:#785825}
+#docBody{font-size:14px;line-height:1.85;min-height:370px!important;resize:vertical;border:1px solid #cbd8e1;border-radius:12px;box-shadow:inset 0 1px 3px #1c354312;padding:16px 19px!important}
+#docBody:focus{border-color:#c49a52;outline:3px solid #d8af6b39}
+.rimdan-theme-toggle{height:37px;min-width:38px;display:grid;place-items:center;border-radius:10px!important;font-size:22px!important}
+.rimdan-theme-setting{display:flex;gap:10px;align-items:center;justify-content:center;max-width:max-content;min-width:155px}
+.rimdan-theme-glyph{line-height:1}
+.rimdan-theme-panel{padding:21px}
+.rimdan-theme-panel h2{margin:0 0 8px}
+.rimdan-theme-panel p{font-size:13px;color:var(--muted);margin-bottom:12px}
+.rimdan-completion{
+ position:fixed;z-index:250;top:clamp(72px,12vh,120px);left:50%;transform:translateX(-50%);
+ display:flex;align-items:center;gap:13px;min-width:min(380px,calc(100vw - 32px));max-width:min(600px,calc(100vw - 32px));
+ border:1px solid #c6a05a;border-radius:17px;padding:15px 17px;
+ background:linear-gradient(120deg,#0c2c43,#183c53);color:#fff6d9;
+ box-shadow:0 18px 40px #0b1c356b;direction:inherit;line-height:1.6;
+}
+.rimdan-completion-symbol{width:37px;height:37px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;background:#e0f6e7;color:#21764a;font-weight:900;font-size:23px}
+.rimdan-completion.info .rimdan-completion-symbol{background:#f5e8c7;color:#825913}
+.rimdan-completion.error .rimdan-completion-symbol{background:#ffe2e0;color:#a33232}
+.rimdan-completion-text{flex:1;font-size:13px;min-width:0;overflow-wrap:anywhere}
+.rimdan-completion button{border:1px solid #deb66f88;border-radius:8px;background:#1e465e;color:#ffe9b8;font-size:22px;width:31px;height:31px;cursor:pointer}
+.rimdan-wait{min-width:245px;justify-content:center;z-index:240;box-shadow:0 16px 45px #071b315e}
+.rimdan-staff-actions .rimdan-icon-action{min-width:38px;width:38px!important}
+@media(max-width:760px){.rimdan-completion{top:65px;padding:11px 13px}.rimdan-wait{min-width:0}.rimdan-location{display:block;width:max-content;margin:2px 0 7px}}
+/* Dark UI only: the company letterhead and print output stay white. */
+html[data-theme="dark"]{
+ --bg:#091b29;--ink:#e7eff6;--muted:#a9bdd0;--line:#32475a;
+ --shadow:0 9px 32px #00000028;
+ color-scheme:dark;
+}
+html[data-theme="dark"] body,
+html[data-theme="dark"] .main-wrap,
+html[data-theme="dark"] main{background:#091b29!important;color:#e8f0f7}
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .stat,
+html[data-theme="dark"] .template-card,
+html[data-theme="dark"] .cloud-panel,
+html[data-theme="dark"] .editor-fields,
+html[data-theme="dark"] .rimdan-staff-panel{
+ background:#122b3f!important;border-color:#38546a!important;color:#e5edf6!important;
+}
+html[data-theme="dark"] .heading h1,html[data-theme="dark"] .heading p,
+html[data-theme="dark"] .panel h1,html[data-theme="dark"] .panel h2,
+html[data-theme="dark"] .panel label,html[data-theme="dark"] .stat,
+html[data-theme="dark"] .rimdan-section-heading h1,
+html[data-theme="dark"] .rimdan-section-heading h2{color:#f0e5d2!important}
+html[data-theme="dark"] .toolbar input,
+html[data-theme="dark"] .toolbar select,
+html[data-theme="dark"] .editor-fields input:not([type=file]),
+html[data-theme="dark"] .editor-fields select,
+html[data-theme="dark"] .editor-fields textarea,
+html[data-theme="dark"] .cloud-panel input:not([type=file]),
+html[data-theme="dark"] .cloud-panel select,
+html[data-theme="dark"] .cloud-panel textarea{
+ background:#1d384d!important;border-color:#466078!important;color:#eff5fa!important;
+}
+html[data-theme="dark"] .preview-panel{background:#203b4d!important;border-color:#45647b!important}
+html[data-theme="dark"] .preview-scroll{background:#243e4f!important}
+html[data-theme="dark"] .preview-paper,html[data-theme="dark"] .official-paper{
+ color:#15283a!important;color-scheme:light!important;background:#fff!important;
+}
+html[data-theme="dark"] .format-details,
+html[data-theme="dark"] .document-sharing,
+html[data-theme="dark"] .rimdan-account-form{background:#1e3648!important;border-color:#6e603e!important;color:#edf3f8!important}
+html[data-theme="dark"] .document-table td,html[data-theme="dark"] .document-table th{color:#e0eaf0!important;border-color:#3a5265!important}
+html[data-theme="dark"] .document-table tbody tr:hover{background:#254155!important}
+html[data-theme="dark"] .rimdan-inline-hint,html[data-theme="dark"] .rimdan-sharing-notice{background:#3b3528;color:#f5dbad;border-color:#6b5634}
+html[data-theme="dark"] input[type=file]{background:#233e4f;color:#e9d7b0;border-color:#806b4a}
+html[data-theme="dark"] .rimdan-staff-identity small{color:#b6c6d4}
+html[data-theme="dark"] footer{background:#0d2335!important;color:#99acc0!important;border-color:#25465f!important}
+html[data-theme="dark"] .auth-panel{background:linear-gradient(150deg,#162f44,#1f3b50)!important;color:#e8f2fa!important}
+html[data-theme="dark"] .auth-panel h1{color:#f4dfb7!important}
+html[data-theme="dark"] .auth-panel input{background:#233e51;color:#f6fafc}
+@media print{html[data-theme="dark"],html[data-theme="dark"] body{color-scheme:light!important;background:white!important;color:#000!important}
+ html[data-theme="dark"] .preview-panel,html[data-theme="dark"] .preview-paper{background:white!important;color:#000!important}
+}
